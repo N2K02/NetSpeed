@@ -12,7 +12,7 @@ import kotlin.math.roundToLong
  *
  * Every call to [sample] reads the phone's total bytes received / sent
  * (all apps, all networks) and divides the change since the last call by the
- * time that passed. Result is rounded to a whole number.
+ * time that passed. Speeds are in bits per second.
  */
 class SpeedMeter(context: Context) {
     private val cm = context.applicationContext
@@ -22,7 +22,8 @@ class SpeedMeter(context: Context) {
     private var lastTx = -1L
     private var lastTime = 0L
 
-    data class Reading(val down: Long, val up: Long)
+    /** Download / upload in bits per second. */
+    data class Reading(val downBps: Double, val upBps: Double)
 
     /** Forget the previous sample, e.g. after the screen was off. */
     fun reset() {
@@ -36,7 +37,7 @@ class SpeedMeter(context: Context) {
             caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    fun sample(unit: Int): Reading {
+    fun sample(): Reading {
         val rx = TrafficStats.getTotalRxBytes()
         val tx = TrafficStats.getTotalTxBytes()
         val now = SystemClock.elapsedRealtime()
@@ -45,7 +46,7 @@ class SpeedMeter(context: Context) {
             tx == TrafficStats.UNSUPPORTED.toLong()
         ) {
             reset()
-            return Reading(0, 0)
+            return Reading(0.0, 0.0)
         }
 
         val first = lastRx < 0 || lastTx < 0
@@ -57,14 +58,20 @@ class SpeedMeter(context: Context) {
         lastTime = now
 
         // First sample, or counters were reset (network switch): nothing to compare yet.
-        if (first || seconds <= 0.0 || dRx < 0 || dTx < 0) return Reading(0, 0)
+        if (first || seconds <= 0.0 || dRx < 0 || dTx < 0) return Reading(0.0, 0.0)
 
-        return Reading(convert(dRx / seconds, unit), convert(dTx / seconds, unit))
+        return Reading(dRx * 8.0 / seconds, dTx * 8.0 / seconds)
     }
 
-    private fun convert(bytesPerSec: Double, unit: Int): Long = when (unit) {
-        Prefs.UNIT_KBS -> bytesPerSec / 1024.0
-        Prefs.UNIT_MBS -> bytesPerSec / (1024.0 * 1024.0)
-        else -> bytesPerSec * 8.0 / 1_000_000.0   // Mbps
-    }.roundToLong()
+    companion object {
+        /**
+         * Whole number with Kb or Mb next to it (kilobits / megabits per second).
+         * Below 1000 Kb it shows Kb, from there on Mb.
+         */
+        fun format(bitsPerSec: Double): String {
+            val kb = (bitsPerSec / 1000.0).roundToLong()
+            if (kb < 1000) return "$kb Kb"
+            return "${(bitsPerSec / 1_000_000.0).roundToLong()} Mb"
+        }
+    }
 }

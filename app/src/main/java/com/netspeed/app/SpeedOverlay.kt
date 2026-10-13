@@ -7,7 +7,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -15,17 +14,16 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.MotionEvent
-import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.TextView
-import kotlin.math.abs
 
 /**
- * The small floating "20 D/ 5 U" label shown on top of every app.
+ * The speed text drawn in the status bar row, e.g. "20 Mb / 5 Kb".
  *
- * A visible overlay window keeps the app alive in the background on its own,
- * so no foreground service and no notification are needed.
+ * Android doesn't let normal apps add text to the real status bar, so this is a
+ * transparent overlay window lined up exactly with it. The status bar's own
+ * icons and touches stay on top. A visible overlay also keeps the app alive in
+ * the background on its own, so no foreground service / notification is needed.
  */
 @SuppressLint("StaticFieldLeak") // only ever holds the application context
 object SpeedOverlay {
@@ -37,10 +35,12 @@ object SpeedOverlay {
     private var meter: SpeedMeter? = null
     private var screenOn = true
 
-    /** Latest text shown, for the settings screen preview. */
-    var lastText: String = "0 D/ 0 U"
+    /** Latest reading, for the settings screen. */
+    var lastDown: String = "0 Kb"
         private set
-    var listener: ((String) -> Unit)? = null
+    var lastUp: String = "0 Kb"
+        private set
+    var listener: ((down: String, up: String) -> Unit)? = null
 
     val isRunning get() = view != null
 
@@ -48,8 +48,9 @@ object SpeedOverlay {
         override fun run() {
             val ctx = app ?: return
             val m = meter ?: return
-            val r = m.sample(Prefs.unit(ctx))
-            show("${r.down} D/ ${r.up} U")
+            val r = m.sample()
+            show(SpeedMeter.format(r.downBps), SpeedMeter.format(r.upBps))
+            placeIfScreenChanged()
             if (screenOn) handler.postDelayed(this, Prefs.intervalSec(ctx) * 1000L)
         }
     }
@@ -84,29 +85,28 @@ object SpeedOverlay {
         wm = windowManager
 
         val tv = TextView(ctx).apply {
-            setTextColor(0xFFFFFFFF.toInt())
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            val padH = dp(ctx, 7); val padV = dp(ctx, 3)
-            setPadding(padH, padV, padH, padV)
-            background = GradientDrawable().apply {
-                setColor(0xB3000000.toInt())
-                cornerRadius = dp(ctx, 8).toFloat()
-            }
-            text = lastText
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            gravity = Gravity.CENTER_VERTICAL or Gravity.END
+            includeFontPadding = false
+            maxLines = 1
+            text = composed()
         }
         view = tv
 
-        val dm = ctx.resources.displayMetrics
         val p = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            statusBarHeight(ctx),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            baseFlags(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = Prefs.posX(ctx).takeIf { it >= 0 } ?: (dm.widthPixels / 2 - dp(ctx, 45))
-            y = Prefs.posY(ctx).takeIf { it >= 0 } ?: dp(ctx, 30)
+            // Anchored by its RIGHT edge, so as the number grows it grows to the
+            // left and never runs into the clock on its right.
+            gravity = Gravity.TOP or Gravity.END
+            y = 0
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode =
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -114,7 +114,6 @@ object SpeedOverlay {
         }
         params = p
         applyStyle()
-        attachDrag(tv)
 
         try {
             windowManager.addView(tv, p)
@@ -145,7 +144,7 @@ object SpeedOverlay {
         meter = null
     }
 
-    /** Re-applies text size / lock after a settings change, and refreshes the reading now. */
+    /** Re-applies position / size / colour after a settings change, and refreshes now. */
     fun applySettings() {
         applyStyle()
         val v = view ?: return
@@ -157,73 +156,46 @@ object SpeedOverlay {
         }
     }
 
+    private var placedForWidth = 0
+
     private fun applyStyle() {
         val ctx = app ?: return
         val v = view ?: return
         val p = params ?: return
         v.setTextSize(TypedValue.COMPLEX_UNIT_SP, Prefs.textSize(ctx).toFloat())
-        if (Prefs.locked(ctx)) {
-            // Touches go straight through to the app underneath. Android 12+ only
-            // lets touches pass an overlay whose opacity is at most 0.8.
-            p.flags = baseFlags() or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-            p.alpha = 0.8f
-        } else {
-            p.flags = baseFlags()
-            p.alpha = 1f
-        }
+        val white = Prefs.whiteText(ctx)
+        v.setTextColor(if (white) 0xFFFFFFFF.toInt() else 0xFF000000.toInt())
+        // Faint outline so it stays readable on any background.
+        v.setShadowLayer(2f, 0f, 0f, if (white) 0x99000000.toInt() else 0x99FFFFFF.toInt())
+        p.height = statusBarHeight(ctx)
+        val w = ctx.resources.displayMetrics.widthPixels
+        // Slider value = where the meter's right edge sits, from left (0) to right (1000).
+        p.x = (w * (1000 - Prefs.position(ctx)) / 1000f).toInt()
+        placedForWidth = w
     }
 
-    private fun baseFlags() =
-        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-
-    private fun show(text: String) {
-        lastText = text
-        view?.text = text
-        listener?.invoke(text)
+    /** Keeps the position right after the screen rotates. */
+    private fun placeIfScreenChanged() {
+        val ctx = app ?: return
+        if (ctx.resources.displayMetrics.widthPixels == placedForWidth) return
+        applyStyle()
+        val v = view ?: return
+        val p = params ?: return
+        runCatching { wm?.updateViewLayout(v, p) }
     }
 
-    /** Drag to move; a tap opens the settings screen. */
-    @SuppressLint("ClickableViewAccessibility")
-    private fun attachDrag(tv: TextView) {
-        val slop = ViewConfiguration.get(tv.context).scaledTouchSlop
-        var downX = 0f; var downY = 0f
-        var startX = 0; var startY = 0
-        var dragging = false
-        tv.setOnTouchListener { _, e ->
-            val p = params ?: return@setOnTouchListener false
-            when (e.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    downX = e.rawX; downY = e.rawY
-                    startX = p.x; startY = p.y
-                    dragging = false
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = e.rawX - downX; val dy = e.rawY - downY
-                    if (!dragging && (abs(dx) > slop || abs(dy) > slop)) dragging = true
-                    if (dragging) {
-                        p.x = (startX + dx).toInt().coerceAtLeast(0)
-                        p.y = (startY + dy).toInt().coerceAtLeast(0)
-                        runCatching { wm?.updateViewLayout(tv, p) }
-                    }
-                }
-                MotionEvent.ACTION_UP -> {
-                    val ctx = app
-                    if (dragging) {
-                        if (ctx != null) Prefs.setPos(ctx, p.x, p.y)
-                    } else if (ctx != null) {
-                        ctx.startActivity(
-                            Intent(ctx, MainActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        )
-                    }
-                }
-            }
-            true
-        }
+    private fun composed() = "$lastDown / $lastUp"
+
+    private fun show(down: String, up: String) {
+        lastDown = down
+        lastUp = up
+        view?.text = composed()
+        listener?.invoke(down, up)
     }
 
-    private fun dp(ctx: Context, v: Int) =
-        (v * ctx.resources.displayMetrics.density + 0.5f).toInt()
+    private fun statusBarHeight(ctx: Context): Int {
+        val id = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) ctx.resources.getDimensionPixelSize(id)
+        else (24 * ctx.resources.displayMetrics.density).toInt()
+    }
 }

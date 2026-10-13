@@ -15,14 +15,15 @@ import android.widget.LinearLayout
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
 
 /** Settings screen. The meter itself runs on its own once started. */
 class MainActivity : Activity() {
 
-    private lateinit var preview: TextView
-    private lateinit var unitHint: TextView
+    private lateinit var downText: TextView
+    private lateinit var upText: TextView
     private lateinit var status: TextView
     private lateinit var permButton: Button
     private lateinit var batteryButton: Button
@@ -38,18 +39,8 @@ class MainActivity : Activity() {
             setPadding(pad, pad, pad, pad)
         }
 
-        preview = TextView(this).apply {
-            textSize = 34f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            gravity = Gravity.CENTER
-            text = SpeedOverlay.lastText
-        }
-        root.addView(preview)
-        unitHint = TextView(this).apply {
-            gravity = Gravity.CENTER
-            alpha = 0.7f
-        }
-        root.addView(unitHint)
+        downText = speedRow(root, "Download")
+        upText = speedRow(root, "Upload")
 
         status = TextView(this).apply { setPadding(0, dp(16), 0, dp(4)) }
         root.addView(status)
@@ -68,7 +59,7 @@ class MainActivity : Activity() {
         root.addView(permButton)
 
         enableSwitch = Switch(this).apply {
-            text = "Show speed meter"
+            text = "Show speed in status bar"
             textSize = 17f
             setPadding(0, dp(12), 0, dp(12))
             isChecked = Prefs.enabled(context)
@@ -80,33 +71,44 @@ class MainActivity : Activity() {
         }
         root.addView(enableSwitch)
 
+        root.addView(header("Position in status bar"))
+        root.addView(TextView(this).apply {
+            alpha = 0.7f
+            text = "Slide until the speed sits just left of your clock."
+        })
+        root.addView(SeekBar(this).apply {
+            min = 50
+            max = 1000
+            progress = Prefs.position(context)
+            setPadding(dp(8), dp(12), dp(8), dp(12))
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(s: SeekBar, v: Int, fromUser: Boolean) {
+                    if (!fromUser) return
+                    Prefs.setPosition(context, v)
+                    SpeedOverlay.applySettings()
+                }
+                override fun onStartTrackingTouch(s: SeekBar) {}
+                override fun onStopTrackingTouch(s: SeekBar) {}
+            })
+        })
+
         root.addView(header("Refresh every"))
         root.addView(radioRow(
             listOf("1 sec" to 1, "2 sec" to 2, "3 sec" to 3),
             Prefs.intervalSec(this)
         ) { Prefs.setIntervalSec(this, it) })
 
-        root.addView(header("Unit"))
-        root.addView(radioRow(
-            listOf("Mbps" to Prefs.UNIT_MBPS, "KB/s" to Prefs.UNIT_KBS, "MB/s" to Prefs.UNIT_MBS),
-            Prefs.unit(this)
-        ) { Prefs.setUnit(this, it) })
-
         root.addView(header("Text size"))
         root.addView(radioRow(
-            listOf("Small" to 11, "Medium" to 13, "Large" to 16),
+            listOf("Small" to 10, "Medium" to 11, "Large" to 13),
             Prefs.textSize(this)
         ) { Prefs.setTextSize(this, it) })
 
-        root.addView(Switch(this).apply {
-            text = "Lock position (touches pass through)"
-            setPadding(0, dp(16), 0, dp(8))
-            isChecked = Prefs.locked(context)
-            setOnCheckedChangeListener { _, on ->
-                Prefs.setLocked(context, on)
-                SpeedOverlay.applySettings()
-            }
-        })
+        root.addView(header("Text colour"))
+        root.addView(radioRow(
+            listOf("White" to 1, "Black" to 0),
+            if (Prefs.whiteText(this)) 1 else 0
+        ) { Prefs.setWhiteText(this, it == 1) })
 
         batteryButton = Button(this).apply {
             text = "Let it run in the background (battery)"
@@ -126,9 +128,9 @@ class MainActivity : Activity() {
         root.addView(TextView(this).apply {
             alpha = 0.7f
             setPadding(0, dp(16), 0, 0)
-            text = "D = download, U = upload, for the whole phone, rounded to a whole " +
-                "number. Shows 0 D/ 0 U when there is no internet.\n\n" +
-                "Drag the meter to move it. Tap it to open these settings.\n\n" +
+            text = "Status bar shows download / upload for the whole phone, e.g. " +
+                "\"20 Mb / 5 Kb\". Kb = kilobits, Mb = megabits per second, rounded to " +
+                "a whole number. Shows 0 Kb / 0 Kb when there is no internet.\n\n" +
                 "No notification is used. If it stops after a while, set NetSpeed's " +
                 "battery usage to \"Unrestricted\" in Android settings (needed on " +
                 "Samsung, Xiaomi, Huawei and some others)."
@@ -141,7 +143,7 @@ class MainActivity : Activity() {
         super.onResume()
         // Coming back from the permission screen: start automatically if allowed.
         if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) SpeedService.start(this)
-        SpeedOverlay.listener = { runOnUiThread { preview.text = it } }
+        SpeedOverlay.listener = { d, u -> runOnUiThread { downText.text = d; upText.text = u } }
         refresh()
     }
 
@@ -159,11 +161,32 @@ class MainActivity : Activity() {
             SpeedOverlay.isRunning -> "Running in the background."
             else -> "Stopped."
         }
-        unitHint.text = "in ${Prefs.unitLabel(Prefs.unit(this))}"
-        preview.text = SpeedOverlay.lastText
+        downText.text = SpeedOverlay.lastDown
+        upText.text = SpeedOverlay.lastUp
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         batteryButton.visibility =
             if (pm.isIgnoringBatteryOptimizations(packageName)) View.GONE else View.VISIBLE
+    }
+
+    /** "Download   20 Mb" row; returns the speed TextView. */
+    private fun speedRow(parent: LinearLayout, label: String): TextView {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(4), 0, dp(4))
+        }
+        row.addView(TextView(this).apply {
+            text = label
+            textSize = 20f
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        val value = TextView(this).apply {
+            textSize = 30f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            text = "0 Kb"
+        }
+        row.addView(value)
+        parent.addView(row)
+        return value
     }
 
     private fun header(t: String) = TextView(this).apply {
