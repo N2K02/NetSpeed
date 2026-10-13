@@ -14,7 +14,6 @@
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="NetSpeed"
-        android:name=".NetSpeedApp"
         android:theme="@style/Theme.NetSpeed">
 
         <activity

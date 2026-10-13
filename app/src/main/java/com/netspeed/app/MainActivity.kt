@@ -1,110 +1,81 @@
 package com.netspeed.app
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.View
-import android.widget.Button
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.slider.Slider
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.dp
 
-/** Settings screen (Material 3 Expressive). The meter itself runs on its own. */
-class MainActivity : AppCompatActivity() {
+/** Settings screen (Material 3 Expressive, Compose). The meter itself runs on its own. */
+class MainActivity : ComponentActivity() {
 
-    private lateinit var downText: TextView
-    private lateinit var upText: TextView
-    private lateinit var status: TextView
-    private lateinit var permCard: View
-    private lateinit var batteryCard: View
-    private lateinit var enableSwitch: MaterialSwitch
-    private lateinit var hSlider: Slider
-    private lateinit var vSlider: Slider
+    // Compose state
+    private var down by mutableStateOf(SpeedOverlay.lastDown)
+    private var up by mutableStateOf(SpeedOverlay.lastUp)
+    private var allowed by mutableStateOf(false)
+    private var running by mutableStateOf(false)
+    private var batteryOk by mutableStateOf(true)
+    private var enabled by mutableStateOf(true)
+    private var hPos by mutableFloatStateOf(Prefs.H_DEFAULT.toFloat())
+    private var vPos by mutableFloatStateOf(0f)
+    private var interval by mutableIntStateOf(1)
+    private var textSize by mutableIntStateOf(11)
+    private var whiteText by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        downText = findViewById(R.id.downText)
-        upText = findViewById(R.id.upText)
-        status = findViewById(R.id.status)
-        permCard = findViewById(R.id.permCard)
-        batteryCard = findViewById(R.id.batteryCard)
-
-        findViewById<Button>(R.id.permButton).setOnClickListener {
-            startActivity(
-                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
-            )
-        }
-        findViewById<Button>(R.id.batteryButton).setOnClickListener {
-            runCatching {
-                startActivity(
-                    Intent(
-                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                        Uri.parse("package:$packageName")
-                    )
-                )
-            }
-        }
-
-        enableSwitch = findViewById(R.id.enableSwitch)
-        enableSwitch.isChecked = Prefs.enabled(this)
-        enableSwitch.setOnCheckedChangeListener { _, on ->
-            Prefs.setEnabled(this, on)
-            if (on) SpeedService.start(this) else SpeedService.stop(this)
-            refresh()
-        }
-
-        // Position sliders
-        hSlider = findViewById(R.id.hSlider)
-        hSlider.setLabelFormatter { "${(it / 10).toInt()}%" }
-        hSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            Prefs.setPosition(this, value.toInt())
-            SpeedOverlay.applySettings()
-        }
-        vSlider = findViewById(R.id.vSlider)
-        vSlider.setLabelFormatter { v -> if (v > 0) "+${v.toInt()} dp" else "${v.toInt()} dp" }
-        vSlider.addOnChangeListener { _, value, fromUser ->
-            if (!fromUser) return@addOnChangeListener
-            Prefs.setVerticalDp(this, value.toInt())
-            SpeedOverlay.applySettings()
-        }
-        findViewById<Button>(R.id.resetButton).setOnClickListener {
-            Prefs.resetPosition(this)
-            SpeedOverlay.applySettings()
-            syncSliders()
-        }
-        syncSliders()
-
-        // Choice groups
-        bindGroup(
-            R.id.intervalGroup,
-            mapOf(R.id.int1 to 1, R.id.int2 to 2, R.id.int3 to 3),
-            Prefs.intervalSec(this)
-        ) { Prefs.setIntervalSec(this, it) }
-        bindGroup(
-            R.id.sizeGroup,
-            mapOf(R.id.sizeS to 10, R.id.sizeM to 11, R.id.sizeL to 13),
-            Prefs.textSize(this)
-        ) { Prefs.setTextSize(this, it) }
-        bindGroup(
-            R.id.colorGroup,
-            mapOf(R.id.colorWhite to 1, R.id.colorBlack to 0),
-            if (Prefs.whiteText(this)) 1 else 0
-        ) { Prefs.setWhiteText(this, it == 1) }
+        loadPrefs()
+        setContent { NetSpeedTheme { SettingsScreen() } }
     }
 
     override fun onResume() {
         super.onResume()
         // Coming back from the permission screen: start automatically if allowed.
         if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) SpeedService.start(this)
-        SpeedOverlay.listener = { d, u -> runOnUiThread { downText.text = d; upText.text = u } }
+        SpeedOverlay.listener = { d, u -> runOnUiThread { down = d; up = u } }
         refresh()
     }
 
@@ -113,40 +84,243 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    private fun loadPrefs() {
+        enabled = Prefs.enabled(this)
+        hPos = Prefs.position(this).toFloat().coerceIn(H_MIN, 1000f)
+        vPos = Prefs.verticalDp(this).toFloat()
+        interval = Prefs.intervalSec(this)
+        textSize = Prefs.textSize(this)
+        whiteText = Prefs.whiteText(this)
+    }
+
     private fun refresh() {
-        val allowed = Settings.canDrawOverlays(this)
-        permCard.visibility = if (allowed) View.GONE else View.VISIBLE
-        enableSwitch.isEnabled = allowed
-        status.text = when {
-            !allowed -> "Needs permission first"
-            SpeedOverlay.isRunning -> "Running in the background"
-            else -> "Off"
+        allowed = Settings.canDrawOverlays(this)
+        running = SpeedOverlay.isRunning
+        down = SpeedOverlay.lastDown
+        up = SpeedOverlay.lastUp
+        batteryOk = getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
+    }
+
+    private fun setEnabledPref(on: Boolean) {
+        enabled = on
+        Prefs.setEnabled(this, on)
+        if (on) SpeedService.start(this) else SpeedService.stop(this)
+        refresh()
+    }
+
+    private fun openOverlayPermission() = startActivity(
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+    )
+
+    private fun openBatterySetting() {
+        runCatching {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))
+            )
         }
-        downText.text = SpeedOverlay.lastDown
-        upText.text = SpeedOverlay.lastUp
-        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        batteryCard.visibility =
-            if (pm.isIgnoringBatteryOptimizations(packageName)) View.GONE else View.VISIBLE
     }
 
-    private fun syncSliders() {
-        hSlider.value = Prefs.position(this).toFloat().coerceIn(hSlider.valueFrom, hSlider.valueTo)
-        vSlider.value = Prefs.verticalDp(this).toFloat().coerceIn(vSlider.valueFrom, vSlider.valueTo)
+    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    private fun SettingsScreen() {
+        val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, scrollBehavior = scrollBehavior) },
+        ) { padding ->
+            LazyColumn(
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 24.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item { SpeedCard() }
+                item {
+                    AnimatedVisibility(visible = !allowed) {
+                        ActionCard(
+                            text = "Allow NetSpeed to display over other apps so it can show the speed in the status bar.",
+                            onClick = ::openOverlayPermission,
+                            error = true,
+                        )
+                    }
+                }
+                item { EnableCard() }
+                item { PositionCard() }
+                item { LookCard() }
+                item {
+                    AnimatedVisibility(visible = !batteryOk) {
+                        ActionCard(
+                            title = "Keep running in the background",
+                            text = "Stops Android from pausing NetSpeed to save battery.",
+                            onClick = ::openBatterySetting,
+                        )
+                    }
+                }
+                item {
+                    Text(
+                        "Speed for the whole phone, rounded to a whole number. Kb = kilobits, Mb = megabits " +
+                            "per second. Shows 0 Kb when there is no internet. No notification is used.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
+            }
+        }
     }
 
-    private fun bindGroup(
-        groupId: Int,
-        buttons: Map<Int, Int>,
-        current: Int,
-        onPick: (Int) -> Unit
+    @Composable
+    private fun SettingCard(
+        containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        content: @Composable () -> Unit,
     ) {
-        val group = findViewById<MaterialButtonToggleGroup>(groupId)
-        buttons.entries.firstOrNull { it.value == current }?.let { group.check(it.key) }
-        group.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            val v = buttons[checkedId] ?: return@addOnButtonCheckedListener
-            onPick(v)
-            SpeedOverlay.applySettings()
+        Card(
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(20.dp)) { content() }
         }
+    }
+
+    @Composable
+    private fun SpeedCard() = SettingCard {
+        SpeedRow("Download", down, MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(8.dp))
+        SpeedRow("Upload", up, MaterialTheme.colorScheme.tertiary)
+    }
+
+    @Composable
+    private fun SpeedRow(label: String, value: String, color: Color) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.displaySmall, color = color)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    private fun ActionCard(text: String, onClick: () -> Unit, title: String? = null, error: Boolean = false) {
+        val scheme = MaterialTheme.colorScheme
+        SettingCard(containerColor = if (error) scheme.errorContainer else scheme.surfaceContainerHighest) {
+            if (title != null) Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text,
+                style = if (error) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodyMedium,
+                color = if (error) scheme.onErrorContainer else scheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = onClick, shapes = ButtonDefaults.shapes()) { Text("Allow") }
+        }
+    }
+
+    @Composable
+    private fun EnableCard() = SettingCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Show in status bar", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    when {
+                        !allowed -> "Needs permission first"
+                        running -> "Running in the background"
+                        else -> "Off"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = enabled && allowed, onCheckedChange = ::setEnabledPref, enabled = allowed)
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    private fun PositionCard() = SettingCard {
+        Text("Position", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Line the speed up just left of your clock.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        LabelWithValue("Horizontal", "${(hPos / 10).toInt()}%")
+        Slider(
+            value = hPos,
+            onValueChange = {
+                hPos = it
+                Prefs.setPosition(this@MainActivity, it.toInt())
+                SpeedOverlay.applySettings()
+            },
+            valueRange = H_MIN..1000f,
+        )
+        LabelWithValue("Vertical", vPos.toInt().let { if (it > 0) "+$it dp" else "$it dp" })
+        Slider(
+            value = vPos,
+            onValueChange = {
+                vPos = it
+                Prefs.setVerticalDp(this@MainActivity, it.toInt())
+                SpeedOverlay.applySettings()
+            },
+            valueRange = Prefs.V_MIN.toFloat()..Prefs.V_MAX.toFloat(),
+        )
+        Spacer(Modifier.height(8.dp))
+        FilledTonalButton(
+            onClick = {
+                Prefs.resetPosition(this@MainActivity)
+                SpeedOverlay.applySettings()
+                hPos = Prefs.position(this@MainActivity).toFloat()
+                vPos = Prefs.verticalDp(this@MainActivity).toFloat()
+            },
+            shapes = ButtonDefaults.shapes(),
+        ) { Text("Reset position") }
+    }
+
+    @Composable
+    private fun LabelWithValue(label: String, value: String) {
+        Row {
+            Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            Text(value, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+
+    @Composable
+    private fun LookCard() = SettingCard {
+        Text("Refresh every", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Choice(listOf(1 to "1 sec", 2 to "2 sec", 3 to "3 sec"), interval) {
+            interval = it; Prefs.setIntervalSec(this@MainActivity, it); SpeedOverlay.applySettings()
+        }
+        Spacer(Modifier.height(20.dp))
+        Text("Text size", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Choice(listOf(10 to "Small", 11 to "Medium", 13 to "Large"), textSize) {
+            textSize = it; Prefs.setTextSize(this@MainActivity, it); SpeedOverlay.applySettings()
+        }
+        Spacer(Modifier.height(20.dp))
+        Text("Text colour", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        Choice(listOf(1 to "White", 0 to "Black"), if (whiteText) 1 else 0) {
+            whiteText = it == 1; Prefs.setWhiteText(this@MainActivity, it == 1); SpeedOverlay.applySettings()
+        }
+    }
+
+    @Composable
+    private fun Choice(options: List<Pair<Int, String>>, current: Int, onPick: (Int) -> Unit) {
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            options.forEachIndexed { i, (value, label) ->
+                SegmentedButton(
+                    selected = value == current,
+                    onClick = { onPick(value) },
+                    shape = SegmentedButtonDefaults.itemShape(index = i, count = options.size),
+                    label = { Text(label) },
+                )
+            }
+        }
+    }
+
+    private companion object {
+        const val H_MIN = 50f
     }
 }
