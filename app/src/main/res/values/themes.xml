@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 Expressive. DayNight follows the phone's light/dark setting;
+         NetSpeedApp applies the wallpaper (dynamic) colours on Android 12+. -->
+    <style name="Theme.NetSpeed" parent="Theme.Material3Expressive.DayNight.NoActionBar">
+        <item name="android:statusBarColor">?attr/colorSurface</item>
+        <item name="android:navigationBarColor">?attr/colorSurface</item>
+        <item name="android:windowLightStatusBar">@bool/lightBars</item>
+        <item name="android:windowLightNavigationBar">@bool/lightBars</item>
+    </style>
+</resources>

@@ -171,6 +171,7 @@ object SpeedOverlay {
         val w = ctx.resources.displayMetrics.widthPixels
         // Slider value = where the meter's right edge sits, from left (0) to right (1000).
         p.x = (w * (1000 - Prefs.position(ctx)) / 1000f).toInt()
+        p.y = (Prefs.verticalDp(ctx) * ctx.resources.displayMetrics.density).toInt()
         placedForWidth = w
     }
 

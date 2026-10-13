@@ -5,14 +5,14 @@ plugins {
 
 android {
     namespace = "com.netspeed.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.netspeed.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "1.2"
     }
 
     signingConfigs {
@@ -43,4 +43,9 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+}
+
+dependencies {
+    // Material 3 Expressive components + theme
+    implementation("com.google.android.material:material:1.14.0")
 }

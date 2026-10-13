@@ -27,6 +27,17 @@ object Prefs {
     fun setWhiteText(ctx: Context, v: Boolean) = sp(ctx).edit().putBoolean("whiteText", v).apply()
 
     /** Horizontal position in the status bar, 0 = far left … 1000 = far right. */
-    fun position(ctx: Context) = sp(ctx).getInt("sbPos", 250).coerceIn(0, 1000)
+    fun position(ctx: Context) = sp(ctx).getInt("sbPos", H_DEFAULT).coerceIn(0, 1000)
     fun setPosition(ctx: Context, v: Int) = sp(ctx).edit().putInt("sbPos", v.coerceIn(0, 1000)).apply()
+
+    /** Vertical offset from the top of the status bar, in dp (-30 … 120, 0 = in line with it). */
+    fun verticalDp(ctx: Context) = sp(ctx).getInt("sbY", 0).coerceIn(V_MIN, V_MAX)
+    fun setVerticalDp(ctx: Context, v: Int) = sp(ctx).edit().putInt("sbY", v.coerceIn(V_MIN, V_MAX)).apply()
+
+    const val H_DEFAULT = 250
+    const val V_MIN = -30
+    const val V_MAX = 120
+
+    fun resetPosition(ctx: Context) =
+        sp(ctx).edit().putInt("sbPos", H_DEFAULT).putInt("sbY", 0).apply()
 }

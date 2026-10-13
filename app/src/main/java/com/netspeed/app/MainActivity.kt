@@ -1,142 +1,103 @@
 package com.netspeed.app
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import android.view.Gravity
 import android.view.View
 import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.RadioButton
-import android.widget.RadioGroup
-import android.widget.ScrollView
-import android.widget.SeekBar
-import android.widget.Switch
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.slider.Slider
 
-/** Settings screen. The meter itself runs on its own once started. */
-class MainActivity : Activity() {
+/** Settings screen (Material 3 Expressive). The meter itself runs on its own. */
+class MainActivity : AppCompatActivity() {
 
     private lateinit var downText: TextView
     private lateinit var upText: TextView
     private lateinit var status: TextView
-    private lateinit var permButton: Button
-    private lateinit var batteryButton: Button
-    private lateinit var enableSwitch: Switch
+    private lateinit var permCard: View
+    private lateinit var batteryCard: View
+    private lateinit var enableSwitch: MaterialSwitch
+    private lateinit var hSlider: Slider
+    private lateinit var vSlider: Slider
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "NetSpeed"
+        setContentView(R.layout.activity_main)
 
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(20)
-            setPadding(pad, pad, pad, pad)
+        downText = findViewById(R.id.downText)
+        upText = findViewById(R.id.upText)
+        status = findViewById(R.id.status)
+        permCard = findViewById(R.id.permCard)
+        batteryCard = findViewById(R.id.batteryCard)
+
+        findViewById<Button>(R.id.permButton).setOnClickListener {
+            startActivity(
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+            )
         }
-
-        downText = speedRow(root, "Download")
-        upText = speedRow(root, "Upload")
-
-        status = TextView(this).apply { setPadding(0, dp(16), 0, dp(4)) }
-        root.addView(status)
-
-        permButton = Button(this).apply {
-            text = "Allow display over other apps"
-            setOnClickListener {
+        findViewById<Button>(R.id.batteryButton).setOnClickListener {
+            runCatching {
                 startActivity(
                     Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                         Uri.parse("package:$packageName")
                     )
                 )
             }
         }
-        root.addView(permButton)
 
-        enableSwitch = Switch(this).apply {
-            text = "Show speed in status bar"
-            textSize = 17f
-            setPadding(0, dp(12), 0, dp(12))
-            isChecked = Prefs.enabled(context)
-            setOnCheckedChangeListener { _, on ->
-                Prefs.setEnabled(context, on)
-                if (on) SpeedService.start(context) else SpeedService.stop(context)
-                refresh()
-            }
+        enableSwitch = findViewById(R.id.enableSwitch)
+        enableSwitch.isChecked = Prefs.enabled(this)
+        enableSwitch.setOnCheckedChangeListener { _, on ->
+            Prefs.setEnabled(this, on)
+            if (on) SpeedService.start(this) else SpeedService.stop(this)
+            refresh()
         }
-        root.addView(enableSwitch)
 
-        root.addView(header("Position in status bar"))
-        root.addView(TextView(this).apply {
-            alpha = 0.7f
-            text = "Slide until the speed sits just left of your clock."
-        })
-        root.addView(SeekBar(this).apply {
-            min = 50
-            max = 1000
-            progress = Prefs.position(context)
-            setPadding(dp(8), dp(12), dp(8), dp(12))
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(s: SeekBar, v: Int, fromUser: Boolean) {
-                    if (!fromUser) return
-                    Prefs.setPosition(context, v)
-                    SpeedOverlay.applySettings()
-                }
-                override fun onStartTrackingTouch(s: SeekBar) {}
-                override fun onStopTrackingTouch(s: SeekBar) {}
-            })
-        })
+        // Position sliders
+        hSlider = findViewById(R.id.hSlider)
+        hSlider.setLabelFormatter { "${(it / 10).toInt()}%" }
+        hSlider.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            Prefs.setPosition(this, value.toInt())
+            SpeedOverlay.applySettings()
+        }
+        vSlider = findViewById(R.id.vSlider)
+        vSlider.setLabelFormatter { v -> if (v > 0) "+${v.toInt()} dp" else "${v.toInt()} dp" }
+        vSlider.addOnChangeListener { _, value, fromUser ->
+            if (!fromUser) return@addOnChangeListener
+            Prefs.setVerticalDp(this, value.toInt())
+            SpeedOverlay.applySettings()
+        }
+        findViewById<Button>(R.id.resetButton).setOnClickListener {
+            Prefs.resetPosition(this)
+            SpeedOverlay.applySettings()
+            syncSliders()
+        }
+        syncSliders()
 
-        root.addView(header("Refresh every"))
-        root.addView(radioRow(
-            listOf("1 sec" to 1, "2 sec" to 2, "3 sec" to 3),
+        // Choice groups
+        bindGroup(
+            R.id.intervalGroup,
+            mapOf(R.id.int1 to 1, R.id.int2 to 2, R.id.int3 to 3),
             Prefs.intervalSec(this)
-        ) { Prefs.setIntervalSec(this, it) })
-
-        root.addView(header("Text size"))
-        root.addView(radioRow(
-            listOf("Small" to 10, "Medium" to 11, "Large" to 13),
+        ) { Prefs.setIntervalSec(this, it) }
+        bindGroup(
+            R.id.sizeGroup,
+            mapOf(R.id.sizeS to 10, R.id.sizeM to 11, R.id.sizeL to 13),
             Prefs.textSize(this)
-        ) { Prefs.setTextSize(this, it) })
-
-        root.addView(header("Text colour"))
-        root.addView(radioRow(
-            listOf("White" to 1, "Black" to 0),
+        ) { Prefs.setTextSize(this, it) }
+        bindGroup(
+            R.id.colorGroup,
+            mapOf(R.id.colorWhite to 1, R.id.colorBlack to 0),
             if (Prefs.whiteText(this)) 1 else 0
-        ) { Prefs.setWhiteText(this, it == 1) })
-
-        batteryButton = Button(this).apply {
-            text = "Let it run in the background (battery)"
-            setOnClickListener {
-                runCatching {
-                    startActivity(
-                        Intent(
-                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.parse("package:$packageName")
-                        )
-                    )
-                }
-            }
-        }
-        root.addView(batteryButton)
-
-        root.addView(TextView(this).apply {
-            alpha = 0.7f
-            setPadding(0, dp(16), 0, 0)
-            text = "Status bar shows download / upload for the whole phone, e.g. " +
-                "\"20 Mb / 5 Kb\". Kb = kilobits, Mb = megabits per second, rounded to " +
-                "a whole number. Shows 0 Kb / 0 Kb when there is no internet.\n\n" +
-                "No notification is used. If it stops after a while, set NetSpeed's " +
-                "battery usage to \"Unrestricted\" in Android settings (needed on " +
-                "Samsung, Xiaomi, Huawei and some others)."
-        })
-
-        setContentView(ScrollView(this).apply { addView(root) })
+        ) { Prefs.setWhiteText(this, it == 1) }
     }
 
     override fun onResume() {
@@ -154,68 +115,38 @@ class MainActivity : Activity() {
 
     private fun refresh() {
         val allowed = Settings.canDrawOverlays(this)
-        permButton.visibility = if (allowed) View.GONE else View.VISIBLE
+        permCard.visibility = if (allowed) View.GONE else View.VISIBLE
         enableSwitch.isEnabled = allowed
         status.text = when {
-            !allowed -> "Step 1: allow NetSpeed to display over other apps."
-            SpeedOverlay.isRunning -> "Running in the background."
-            else -> "Stopped."
+            !allowed -> "Needs permission first"
+            SpeedOverlay.isRunning -> "Running in the background"
+            else -> "Off"
         }
         downText.text = SpeedOverlay.lastDown
         upText.text = SpeedOverlay.lastUp
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        batteryButton.visibility =
+        batteryCard.visibility =
             if (pm.isIgnoringBatteryOptimizations(packageName)) View.GONE else View.VISIBLE
     }
 
-    /** "Download   20 Mb" row; returns the speed TextView. */
-    private fun speedRow(parent: LinearLayout, label: String): TextView {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, dp(4), 0, dp(4))
-        }
-        row.addView(TextView(this).apply {
-            text = label
-            textSize = 20f
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val value = TextView(this).apply {
-            textSize = 30f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            text = "0 Kb"
-        }
-        row.addView(value)
-        parent.addView(row)
-        return value
+    private fun syncSliders() {
+        hSlider.value = Prefs.position(this).toFloat().coerceIn(hSlider.valueFrom, hSlider.valueTo)
+        vSlider.value = Prefs.verticalDp(this).toFloat().coerceIn(vSlider.valueFrom, vSlider.valueTo)
     }
 
-    private fun header(t: String) = TextView(this).apply {
-        text = t
-        textSize = 15f
-        typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, dp(14), 0, dp(2))
-    }
-
-    private fun radioRow(options: List<Pair<String, Int>>, current: Int, onPick: (Int) -> Unit) =
-        RadioGroup(this).apply {
-            orientation = RadioGroup.HORIZONTAL
-            options.forEach { (label, value) ->
-                val rb = RadioButton(context).apply {
-                    id = View.generateViewId()
-                    text = label
-                    tag = value
-                    setPadding(0, 0, dp(16), 0)
-                }
-                addView(rb)
-                if (value == current) check(rb.id)
-            }
-            setOnCheckedChangeListener { group, id ->
-                val v = group.findViewById<RadioButton>(id)?.tag as? Int ?: return@setOnCheckedChangeListener
-                onPick(v)
-                SpeedOverlay.applySettings()
-                refresh()
-            }
+    private fun bindGroup(
+        groupId: Int,
+        buttons: Map<Int, Int>,
+        current: Int,
+        onPick: (Int) -> Unit
+    ) {
+        val group = findViewById<MaterialButtonToggleGroup>(groupId)
+        buttons.entries.firstOrNull { it.value == current }?.let { group.check(it.key) }
+        group.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val v = buttons[checkedId] ?: return@addOnButtonCheckedListener
+            onPick(v)
+            SpeedOverlay.applySettings()
         }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density + 0.5f).toInt()
+    }
 }
