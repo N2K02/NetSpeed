@@ -21,7 +21,7 @@ A tiny Android app that shows how much internet speed your phone is using **righ
 1. Open the latest **Release** of this repo on your phone and download `NetSpeed.apk`.
 2. Install it (allow "install unknown apps" for your browser if asked).
 3. Open NetSpeed → **Allow display over other apps** → turn NetSpeed on → go back.
-4. The speed appears in the status bar; use the Position sliders until it sits left of your clock. Tap **Let it run in the background** and allow it.
+4. The speed appears at the top right, just below the status bar; use the Position sliders to move it. Tap **Let it run in the background** and allow it.
 
 Tip: on Samsung, Xiaomi, Huawei and similar phones also set NetSpeed's battery usage to **Unrestricted** so the phone doesn't stop it.
 

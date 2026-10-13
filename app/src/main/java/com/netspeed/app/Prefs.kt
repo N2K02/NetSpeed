@@ -30,14 +30,29 @@ object Prefs {
     fun position(ctx: Context) = sp(ctx).getInt("sbPos", H_DEFAULT).coerceIn(0, 1000)
     fun setPosition(ctx: Context, v: Int) = sp(ctx).edit().putInt("sbPos", v.coerceIn(0, 1000)).apply()
 
-    /** Vertical offset from the top of the status bar, in dp (-30 … 120, 0 = in line with it). */
-    fun verticalDp(ctx: Context) = sp(ctx).getInt("sbY", 0).coerceIn(V_MIN, V_MAX)
+    /**
+     * Vertical offset from the top of the screen, in dp (-30 … 120).
+     * Default: just below the status bar (its height on this phone).
+     */
+    fun verticalDp(ctx: Context): Int {
+        val s = sp(ctx)
+        val v = if (s.contains("sbY")) s.getInt("sbY", 0) else statusBarHeightDp(ctx)
+        return v.coerceIn(V_MIN, V_MAX)
+    }
     fun setVerticalDp(ctx: Context, v: Int) = sp(ctx).edit().putInt("sbY", v.coerceIn(V_MIN, V_MAX)).apply()
 
-    const val H_DEFAULT = 250
+    /** Default: right edge 3% in from the right side of the screen (top right). */
+    const val H_DEFAULT = 970
     const val V_MIN = -30
     const val V_MAX = 120
 
     fun resetPosition(ctx: Context) =
-        sp(ctx).edit().putInt("sbPos", H_DEFAULT).putInt("sbY", 0).apply()
+        sp(ctx).edit().putInt("sbPos", H_DEFAULT).remove("sbY").apply()
+
+    private fun statusBarHeightDp(ctx: Context): Int {
+        val res = ctx.resources
+        val id = res.getIdentifier("status_bar_height", "dimen", "android")
+        val px = if (id > 0) res.getDimensionPixelSize(id) else 0
+        return if (px > 0) (px / res.displayMetrics.density + 0.5f).toInt() else 24
+    }
 }
