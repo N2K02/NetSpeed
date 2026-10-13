@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Down arrow + up arrow, the NetSpeed mark -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- down arrow (left) -->
+    <path
+        android:fillColor="#4FC3F7"
+        android:pathData="M38,32h8v28h9l-13,16l-13,-16h9z" />
+    <!-- up arrow (right) -->
+    <path
+        android:fillColor="#81C784"
+        android:pathData="M66,32l13,16h-9v28h-8v-28h-9z" />
+</vector>
