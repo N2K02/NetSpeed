@@ -26,7 +26,7 @@ Tip: on Samsung, Xiaomi, Huawei and similar phones also set NetSpeed's battery u
 
 ## How it works
 
-Android only lets an app run in the background without a notification while it has something visible on screen. Android also doesn't let normal apps add text to the real status bar, so NetSpeed draws a transparent overlay lined up exactly with the status bar row. That visible overlay is also what ("display over other apps" permission) lets it run without a foreground service, so it needs no foreground service and no notification. Every interval it reads the phone's total bytes received/sent (`TrafficStats`) and divides the change by the elapsed time.
+Android only lets an app run in the background without a notification while it has something visible on screen. Android also doesn't let normal apps add text to the real status bar, so NetSpeed draws a transparent overlay lined up exactly with the status bar row. That visible overlay ("display over other apps" permission) is also what lets it keep running, so it needs no foreground service and no notification. Every interval it reads the phone's total bytes received/sent (`TrafficStats`) and divides the change by the elapsed time.
 
 ## Build
 
