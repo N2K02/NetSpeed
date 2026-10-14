@@ -32,3 +32,7 @@ Android only lets an app run in the background without a notification while it h
 ## Build
 
 Every push to `main` builds the APK with GitHub Actions and publishes it as a release named "NetSpeed <version>" (1.0, 1.1, 1.2 …, one decimal place) with release notes listing the changes since the previous release. To jump to a new number (e.g. 2.0), run the workflow by hand from the Actions tab and type the version. Locally: `./gradlew assembleRelease` (shrunk APK) (needs JDK 17 + Android SDK).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
