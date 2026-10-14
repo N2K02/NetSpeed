@@ -129,6 +129,7 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, scrollBehavior = scrollBehavior) },
+            bottomBar = { UpdateFooterBar("NetSpeed") },
         ) { padding ->
             LazyColumn(
                 contentPadding = PaddingValues(
@@ -170,7 +171,6 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
-                item { UpdateFooter("NetSpeed") }
             }
         }
     }
