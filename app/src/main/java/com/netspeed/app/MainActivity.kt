@@ -67,12 +67,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        AppUpdater.init(this, "N2K02/NetSpeed", "NetSpeed")
         loadPrefs()
         setContent { NetSpeedTheme { SettingsScreen() } }
     }
 
     override fun onResume() {
         super.onResume()
+        AppUpdater.onResume(this)
         // Coming back from the permission screen: start automatically if allowed.
         if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) SpeedService.start(this)
         SpeedOverlay.listener = { d, u -> runOnUiThread { down = d; up = u } }
@@ -136,6 +138,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item { UpdateCard() }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
@@ -167,6 +170,7 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.padding(horizontal = 4.dp),
                     )
                 }
+                item { UpdateFooter("NetSpeed") }
             }
         }
     }
