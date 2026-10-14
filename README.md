@@ -1,6 +1,12 @@
 # NetSpeed
 
+[![Latest release](https://img.shields.io/github/v/release/N2K02/NetSpeed?label=download)](https://github.com/N2K02/NetSpeed/releases/latest) ![Android 8.0+](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white) ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 A tiny Android app that shows how much internet speed your phone is using **right now**, in the status bar next to the clock:
+
+*Internet speed meter for Android: live download and upload speed in the status bar, with no notification.*
+
+**[⬇ Download the latest APK](https://github.com/N2K02/NetSpeed/releases/latest)** · Android 8.0 or newer · Free and open source
 
 ```
 20 Mb / 5 Kb
