@@ -127,7 +127,7 @@ class MainActivity : ComponentActivity() {
     private fun SettingsScreen() {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
         Scaffold(
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            modifier = Modifier.nestedScroll(FooterScroll.connection).nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, scrollBehavior = scrollBehavior) },
             bottomBar = { UpdateFooterBar("NetSpeed") },
         ) { padding ->
