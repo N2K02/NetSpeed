@@ -198,8 +198,10 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun SpeedRow(label: String, value: String, color: Color) {
+        val arrow = if (label == "Download") "↓" else "↑"
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(label, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+            Text(arrow, style = MaterialTheme.typography.displaySmall, color = color)
             Text(value, style = MaterialTheme.typography.displaySmall, color = color)
         }
     }

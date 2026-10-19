@@ -18,7 +18,7 @@ import android.view.WindowManager
 import android.widget.TextView
 
 /**
- * The speed text drawn in the status bar row, e.g. "20 Mb / 5 Kb".
+ * The speed text drawn in the status bar row, e.g. "↓ 20 Mb  ↑ 5 Kb".
  *
  * Android doesn't let normal apps add text to the real status bar, so this is a
  * transparent overlay window lined up exactly with it. The status bar's own
@@ -185,7 +185,7 @@ object SpeedOverlay {
         runCatching { wm?.updateViewLayout(v, p) }
     }
 
-    private fun composed() = "$lastDown / $lastUp"
+    private fun composed() = "↓ $lastDown  ↑ $lastUp"
 
     private fun show(down: String, up: String) {
         lastDown = down
