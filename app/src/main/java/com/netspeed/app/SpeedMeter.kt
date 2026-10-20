@@ -31,11 +31,21 @@ class SpeedMeter(context: Context) {
         lastTx = -1L
     }
 
+    /**
+     * True when a network is connected. Android's "validated" check isn't required: some networks
+     * never pass it (captive portals, some company Wi-Fi) while data still flows.
+     */
     fun hasInternet(): Boolean {
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
-        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
+
+    /**
+     * With a VPN on, Android's totals count every byte twice: once on the VPN interface and once on
+     * the real network carrying it. Halving gives a close estimate (VPN overhead aside).
+     */
+    private fun vpnActive(): Boolean =
+        cm.getNetworkCapabilities(cm.activeNetwork)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
 
     fun sample(): Reading {
         val rx = TrafficStats.getTotalRxBytes()
@@ -60,7 +70,8 @@ class SpeedMeter(context: Context) {
         // First sample, or counters were reset (network switch): nothing to compare yet.
         if (first || seconds <= 0.0 || dRx < 0 || dTx < 0) return Reading(0.0, 0.0)
 
-        return Reading(dRx * 8.0 / seconds, dTx * 8.0 / seconds)
+        val share = if (vpnActive()) 0.5 else 1.0
+        return Reading(dRx * 8.0 / seconds * share, dTx * 8.0 / seconds * share)
     }
 
     companion object {

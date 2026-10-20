@@ -14,6 +14,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
+import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
 
@@ -24,6 +26,7 @@ import android.widget.TextView
  * transparent overlay window lined up exactly with it. The status bar's own
  * icons and touches stay on top. A visible overlay also keeps the app alive in
  * the background on its own, so no foreground service / notification is needed.
+ * When an app hides the status bar (videos, games), the meter hides too.
  */
 @SuppressLint("StaticFieldLeak") // only ever holds the application context
 object SpeedOverlay {
@@ -115,6 +118,7 @@ object SpeedOverlay {
         params = p
         applyStyle()
 
+        watchStatusBar(tv)
         try {
             windowManager.addView(tv, p)
         } catch (e: Exception) {
@@ -192,6 +196,21 @@ object SpeedOverlay {
         lastUp = up
         view?.text = composed()
         listener?.invoke(down, up)
+    }
+
+    /** Hides the meter while the status bar is hidden by a full-screen app, and shows it again after. */
+    @Suppress("DEPRECATION")
+    private fun watchStatusBar(v: TextView) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            v.setOnApplyWindowInsetsListener { view, insets ->
+                view.visibility = if (insets.isVisible(WindowInsets.Type.statusBars())) View.VISIBLE else View.INVISIBLE
+                insets
+            }
+        } else {
+            v.setOnSystemUiVisibilityChangeListener { flags ->
+                v.visibility = if (flags and View.SYSTEM_UI_FLAG_FULLSCREEN != 0) View.INVISIBLE else View.VISIBLE
+            }
+        }
     }
 
     private fun statusBarHeight(ctx: Context): Int {
