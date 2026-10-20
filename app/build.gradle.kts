@@ -46,6 +46,8 @@ android {
 dependencies {
     // Material 3 Expressive (MaterialExpressiveTheme, expressive shapes/motion/components)
     implementation("androidx.compose.material3:material3:1.5.0-beta01")
+    // Icons used by the app bar and Updates menu.
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
     implementation("androidx.activity:activity-compose:1.11.0")
     // In-app updates (AppUpdater)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
