@@ -127,9 +127,8 @@ class MainActivity : ComponentActivity() {
     private fun SettingsScreen() {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
         Scaffold(
-            modifier = Modifier.nestedScroll(FooterScroll.connection).nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, scrollBehavior = scrollBehavior) },
-            bottomBar = { UpdateBottomBar("NetSpeed") },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, actions = { SettingsMenuButton() }, scrollBehavior = scrollBehavior) },
         ) { padding ->
             LazyColumn(
                 contentPadding = PaddingValues(
