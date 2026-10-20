@@ -8,6 +8,10 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -63,6 +67,7 @@ class MainActivity : ComponentActivity() {
     private var interval by mutableIntStateOf(1)
     private var textSize by mutableIntStateOf(11)
     private var whiteText by mutableStateOf(true)
+    private var showingUpdates by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -128,9 +133,31 @@ class MainActivity : ComponentActivity() {
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            topBar = { LargeTopAppBar(title = { Text("NetSpeed") }, actions = { SettingsMenuButton() }, scrollBehavior = scrollBehavior) },
+            topBar = {
+                LargeTopAppBar(
+                    title = { Text(if (showingUpdates) "Updates" else "NetSpeed") },
+                    navigationIcon = {
+                        if (showingUpdates) {
+                            IconButton(onClick = { showingUpdates = false }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        }
+                    },
+                    actions = { SettingsMenuButton(onOpenUpdates = { showingUpdates = true }) },
+                    scrollBehavior = scrollBehavior,
+                )
+            },
         ) { padding ->
-            LazyColumn(
+            if (showingUpdates) {
+                UpdatesPage(
+                    modifier = Modifier.padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                )
+            } else LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
                     top = padding.calculateTopPadding() + 8.dp,
@@ -138,7 +165,6 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item { UpdateCard() }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
