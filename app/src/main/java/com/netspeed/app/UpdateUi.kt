@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -30,6 +31,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
@@ -55,7 +58,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -201,22 +203,21 @@ private fun Notes(release: AppUpdater.Release) {
 
 
 /**
- * The gear in the top bar. Its menu has "Update", which shows the installed version and the
- * update status, and checks for updates when tapped (the update card on the screen shows the result).
+ * Three-dot menu in the top bar. Updates opens a dedicated update-management page.
  */
 @Composable
-fun SettingsMenuButton() {
+fun SettingsMenuButton(onOpenUpdates: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     val state by AppUpdater.state.collectAsState()
     Box {
         IconButton(onClick = { open = true }) {
-            Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings")
+            Icon(Icons.Filled.MoreVert, contentDescription = "More options")
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
                 text = {
                     Column {
-                        Text("Update")
+                        Text("Updates")
                         Text(
                             when (val u = state) {
                                 is AppUpdater.State.Checking -> "Checking…"
@@ -231,15 +232,46 @@ fun SettingsMenuButton() {
                         )
                     }
                 },
-                leadingIcon = { Icon(painterResource(R.drawable.ic_system_update), contentDescription = null) },
                 onClick = {
                     open = false
-                    // Other states already show their card with the right buttons.
-                    if (state is AppUpdater.State.Idle || state is AppUpdater.State.UpToDate || state is AppUpdater.State.Failed) {
-                        AppUpdater.check(manual = true)
-                    }
+                    onOpenUpdates()
                 },
             )
         }
+    }
+}
+
+ 
+/** Dedicated update page; the title is supplied by the app's top app bar. */
+@Composable
+fun UpdatesPage(modifier: Modifier = Modifier) {
+    val state by AppUpdater.state.collectAsState()
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        ) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Installed version", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("NetSpeed v${AppUpdater.installedVersionName}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Check GitHub for the latest release, review what's new, and install updates.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(
+                    onClick = { AppUpdater.check(manual = true) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = state !is AppUpdater.State.Checking && state !is AppUpdater.State.Downloading,
+                ) {
+                    Text(if (state is AppUpdater.State.Checking) "Checking for updates…" else "Check for updates")
+                }
+            }
+        }
+        UpdateCard()
     }
 }
