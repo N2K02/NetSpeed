@@ -112,6 +112,13 @@ class MainActivity : ComponentActivity() {
         refresh()
     }
 
+    private fun quitNetSpeed() {
+        Prefs.setEnabled(this, false)
+        enabled = false
+        SpeedService.stop(this)
+        finishAndRemoveTask()
+    }
+
     private fun openOverlayPermission() = startActivity(
         Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
     )
@@ -170,6 +177,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 item { EnableCard() }
+                item {
+                    SettingCard {
+                        Text("Quit NetSpeed", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Stops the floating speed meter and closes NetSpeed. Open the app again and turn the meter back on when you want to resume it.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = ::quitNetSpeed, shapes = ButtonDefaults.shapes()) {
+                            Text("Quit NetSpeed")
+                        }
+                    }
+                }
                 item { PositionCard() }
                 item { LookCard() }
                 item {
