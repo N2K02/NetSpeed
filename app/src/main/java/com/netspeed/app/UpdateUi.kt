@@ -160,28 +160,6 @@ fun UpdatesPage(modifier: Modifier = Modifier) {
             }
             Switch(checked = experimentalEnabled, onCheckedChange = LiveUpdater::setExperimentalEnabled)
         }
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        ) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Installed version", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("NetSpeed v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Check GitHub for the latest release, review what's new, and install updates.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
-                    onClick = { LiveUpdater.controller.check(manual = true) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = state !is dev.n2k02.updater.UpdateStatus.Checking && state !is dev.n2k02.updater.UpdateStatus.Downloading,
-                ) {
-                    Text(if (state is dev.n2k02.updater.UpdateStatus.Checking) "Checking for updates…" else "Check for updates")
-                }
-            }
-        }
         UpdateCard()
     }
 }
