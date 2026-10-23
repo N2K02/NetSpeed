@@ -10,6 +10,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -140,12 +143,24 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = { Text(if (showingUpdates) "About & updates" else "NetSpeed") },
-                    navigationIcon = {
-                        if (showingUpdates) IconButton(onClick = { showingUpdates = false }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
+                    navigationIcon = {},
                 )
+            },
+            bottomBar = {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = !showingUpdates,
+                        onClick = { showingUpdates = false },
+                        icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                        label = { Text("Home") },
+                    )
+                    NavigationBarItem(
+                        selected = showingUpdates,
+                        onClick = { showingUpdates = true },
+                        icon = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
+                        label = { Text("Updates") },
+                    )
+                }
             },
         ) { padding ->
             if (showingUpdates) {
@@ -158,14 +173,6 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("About & updates") },
-                        supportingContent = { Text("Version, experimental builds and updates") },
-                        leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                        modifier = Modifier.clickable { showingUpdates = true },
-                    )
-                }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
