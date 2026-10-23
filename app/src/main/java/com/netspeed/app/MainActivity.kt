@@ -9,10 +9,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -69,14 +77,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        AppUpdater.init(this, "N2K02/NetSpeed", "NetSpeed")
+        LiveUpdater.init(this)
         loadPrefs()
         setContent { NetSpeedTheme { SettingsScreen() } }
     }
 
     override fun onResume() {
         super.onResume()
-        AppUpdater.onResume(this)
+        LiveUpdater.onResume(this)
         // Coming back from the permission screen: start automatically if allowed.
         if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) SpeedService.start(this)
         SpeedOverlay.listener = { d, u -> runOnUiThread { down = d; up = u } }
@@ -137,27 +145,46 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (showingUpdates) "Updates" else "NetSpeed") },
-                    navigationIcon = {
-                        if (showingUpdates) {
-                            IconButton(onClick = { showingUpdates = false }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                            }
-                        }
-                    },
-                    actions = { SettingsMenuButton(onOpenUpdates = { showingUpdates = true }) },
+                    title = { Text(if (showingUpdates) "About & updates" else "NetSpeed") },
+                    navigationIcon = {},
                 )
+            },
+            bottomBar = {
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 4.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.navigationBarsPadding()) {
+                        androidx.compose.material3.HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        )
+                        NavigationBar(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp,
+                        ) {
+                            NavigationBarItem(
+                                selected = !showingUpdates,
+                                onClick = { showingUpdates = false },
+                                icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
+                                label = { Text("Home") },
+                                alwaysShowLabel = true,
+                            )
+                            NavigationBarItem(
+                                selected = showingUpdates,
+                                onClick = { showingUpdates = true },
+                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                                label = { Text("Updates") },
+                                alwaysShowLabel = true,
+                            )
+                        }
+                    }
+                }
             },
         ) { padding ->
             if (showingUpdates) {
-                UpdatesPage(
-                    modifier = Modifier.padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = padding.calculateTopPadding() + 8.dp,
-                        bottom = padding.calculateBottomPadding() + 24.dp,
-                    ),
-                )
+                UpdatesPage(modifier = Modifier.padding(padding).padding(horizontal = 16.dp))
             } else LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
@@ -221,7 +248,7 @@ class MainActivity : ComponentActivity() {
         content: @Composable () -> Unit,
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -250,7 +277,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun ActionCard(text: String, onClick: () -> Unit, title: String? = null, error: Boolean = false) {
         val scheme = MaterialTheme.colorScheme
-        SettingCard(containerColor = if (error) scheme.errorContainer else scheme.surfaceContainerHighest) {
+        SettingCard(containerColor = scheme.surfaceContainer) {
             if (title != null) Text(title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text,
