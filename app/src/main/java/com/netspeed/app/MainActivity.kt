@@ -9,10 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -137,11 +139,18 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("NetSpeed") },
+                    title = { Text(if (showingUpdates) "About & updates" else "NetSpeed") },
+                    navigationIcon = {
+                        if (showingUpdates) IconButton(onClick = { showingUpdates = false }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
                 )
             },
         ) { padding ->
-            LazyColumn(
+            if (showingUpdates) {
+                UpdatesPage(modifier = Modifier.padding(padding).padding(horizontal = 16.dp))
+            } else LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
                     top = padding.calculateTopPadding() + 8.dp,
@@ -149,7 +158,14 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item { UpdatesPage(modifier = Modifier.fillMaxWidth()) }
+                item {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("About & updates") },
+                        supportingContent = { Text("Version, experimental builds and updates") },
+                        leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
+                        modifier = Modifier.clickable { showingUpdates = true },
+                    )
+                }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
