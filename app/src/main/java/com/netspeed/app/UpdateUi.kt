@@ -8,6 +8,7 @@ import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,47 +103,6 @@ private fun Notes(release: AppUpdater.Release) {
 }
 
 
-/**
- * Three-dot menu in the top bar. Updates opens a dedicated update-management page.
- */
-@Composable
-fun SettingsMenuButton(onOpenUpdates: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val state by LiveUpdater.controller.status.collectAsState()
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Filled.MoreVert, contentDescription = "More options")
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.clip(RoundedCornerShape(22.dp))) {
-            DropdownMenuItem(
-                text = {
-                    Column {
-                        Text("Updates")
-                        Text(
-                            when (val u = state) {
-                                is dev.n2k02.updater.UpdateStatus.Checking -> "Checking…"
-                                is dev.n2k02.updater.UpdateStatus.Available -> "Version ${u.release.tag} available"
-                                is dev.n2k02.updater.UpdateStatus.Downloading -> "Downloading…"
-                                is dev.n2k02.updater.UpdateStatus.Ready, is dev.n2k02.updater.UpdateStatus.NeedsInstallPermission -> "Ready to install"
-                                is dev.n2k02.updater.UpdateStatus.Current -> "Up to date · v${BuildConfig.VERSION_NAME}"
-                                else -> "v${BuildConfig.VERSION_NAME} · check for updates"
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                leadingIcon = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenUpdates()
-                },
-            )
-        }
-    }
-}
-
- 
 /** Dedicated update page; the title is supplied by the app's top app bar. */
 @Composable
 fun UpdatesPage(modifier: Modifier = Modifier) {
@@ -152,22 +112,26 @@ fun UpdatesPage(modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp),
     ) {
         androidx.compose.material3.ListItem(
             headlineContent = { Text("NetSpeed") },
             supportingContent = { Text("Version " + BuildConfig.VERSION_NAME) },
             leadingContent = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.SystemUpdate, contentDescription = null) },
         )
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text("Experimental updates", style = MaterialTheme.typography.titleSmall)
-                Text("Opt in to preview builds. Stable releases stay the default.",
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Switch(checked = experimentalEnabled, onCheckedChange = LiveUpdater::setExperimentalEnabled)
-        }
+        androidx.compose.material3.ListItem(
+            headlineContent = { Text("Experimental updates") },
+            supportingContent = { Text("Offer signed APKs from successful pull request builds. Test builds may have bugs.") },
+            trailingContent = {
+                Switch(checked = experimentalEnabled, onCheckedChange = LiveUpdater::setExperimentalEnabled)
+            },
+            modifier = Modifier.clickable { LiveUpdater.setExperimentalEnabled(!experimentalEnabled) },
+        )
         androidx.compose.material3.HorizontalDivider()
-        UpdateCard()
+        dev.n2k02.updater.N2K02UpdateScreen(
+            controller = LiveUpdater.controller,
+            installGuard = LiveUpdater.installGuard,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
