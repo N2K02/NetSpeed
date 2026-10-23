@@ -137,28 +137,11 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (showingUpdates) "Updates" else "NetSpeed") },
-                    navigationIcon = {
-                        if (showingUpdates) {
-                            IconButton(onClick = { showingUpdates = false }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                            }
-                        }
-                    },
-                    actions = { SettingsMenuButton(onOpenUpdates = { showingUpdates = true }) },
+                    title = { Text("NetSpeed") },
                 )
             },
         ) { padding ->
-            if (showingUpdates) {
-                UpdatesPage(
-                    modifier = Modifier.padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = padding.calculateTopPadding() + 8.dp,
-                        bottom = padding.calculateBottomPadding() + 24.dp,
-                    ),
-                )
-            } else LazyColumn(
+            LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
                     top = padding.calculateTopPadding() + 8.dp,
@@ -166,6 +149,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item { UpdatesPage(modifier = Modifier.fillMaxWidth()) }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
