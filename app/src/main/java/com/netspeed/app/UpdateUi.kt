@@ -35,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
@@ -112,7 +113,7 @@ fun SettingsMenuButton(onOpenUpdates: () -> Unit) {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "More options")
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.clip(RoundedCornerShape(22.dp))) {
             DropdownMenuItem(
                 text = {
                     Column {
@@ -131,6 +132,7 @@ fun SettingsMenuButton(onOpenUpdates: () -> Unit) {
                         )
                     }
                 },
+                leadingIcon = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
                 onClick = {
                     open = false
                     onOpenUpdates()
