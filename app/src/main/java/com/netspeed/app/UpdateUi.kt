@@ -151,7 +151,7 @@ fun UpdatesPage(modifier: Modifier = Modifier) {
     // Match MRadio's About & updates layout, without playback diagnostics.
 
     Column(
-        modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         androidx.compose.material3.ListItem(
