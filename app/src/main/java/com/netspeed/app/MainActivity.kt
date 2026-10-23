@@ -10,9 +10,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -147,19 +150,36 @@ class MainActivity : ComponentActivity() {
                 )
             },
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = !showingUpdates,
-                        onClick = { showingUpdates = false },
-                        icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                        label = { Text("Home") },
-                    )
-                    NavigationBarItem(
-                        selected = showingUpdates,
-                        onClick = { showingUpdates = true },
-                        icon = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                        label = { Text("Updates") },
-                    )
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 4.dp,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.navigationBarsPadding()) {
+                        androidx.compose.material3.HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                        )
+                        NavigationBar(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 0.dp,
+                        ) {
+                            NavigationBarItem(
+                                selected = !showingUpdates,
+                                onClick = { showingUpdates = false },
+                                icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
+                                label = { Text("Home") },
+                                alwaysShowLabel = true,
+                            )
+                            NavigationBarItem(
+                                selected = showingUpdates,
+                                onClick = { showingUpdates = true },
+                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                                label = { Text("Updates") },
+                                alwaysShowLabel = true,
+                            )
+                        }
+                    }
                 }
             },
         ) { padding ->
