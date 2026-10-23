@@ -216,7 +216,7 @@ fun SettingsMenuButton(onOpenUpdates: () -> Unit) {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Filled.MoreVert, contentDescription = "More options")
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.clip(RoundedCornerShape(24.dp))) {
             DropdownMenuItem(
                 text = {
                     Column {
