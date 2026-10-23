@@ -168,7 +168,6 @@ fun UpdatesPage(modifier: Modifier = Modifier) {
             Switch(checked = experimentalEnabled, onCheckedChange = LiveUpdater::setExperimentalEnabled)
         }
         androidx.compose.material3.HorizontalDivider()
-        Text("App updates", style = MaterialTheme.typography.titleLarge)
         UpdateCard()
     }
 }
