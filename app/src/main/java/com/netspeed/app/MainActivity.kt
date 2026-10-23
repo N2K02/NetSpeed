@@ -221,7 +221,7 @@ class MainActivity : ComponentActivity() {
         content: @Composable () -> Unit,
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            
             shape = MaterialTheme.shapes.extraLarge,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -250,7 +250,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun ActionCard(text: String, onClick: () -> Unit, title: String? = null, error: Boolean = false) {
         val scheme = MaterialTheme.colorScheme
-        SettingCard(containerColor = if (error) scheme.errorContainer else scheme.surfaceContainerHighest) {
+        SettingCard(containerColor = scheme.surfaceContainer) {
             if (title != null) Text(title, style = MaterialTheme.typography.titleMedium)
             Text(
                 text,
