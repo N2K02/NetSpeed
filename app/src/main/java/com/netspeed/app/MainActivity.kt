@@ -46,6 +46,8 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import dev.n2k02.updater.hasPendingUpdate
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -142,6 +144,7 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     private fun SettingsScreen() {
+        val updateStatus by LiveUpdater.controller.status.collectAsState()
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -167,14 +170,14 @@ class MainActivity : ComponentActivity() {
                             NavigationBarItem(
                                 selected = !showingUpdates,
                                 onClick = { showingUpdates = false },
-                                icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
-                                label = { Text("Home") },
+                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.Home, contentDescription = "Settings") } },
+                                label = { Text("Settings") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
                                 selected = showingUpdates,
                                 onClick = { showingUpdates = true },
-                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SystemUpdate, contentDescription = "Updates") } },
                                 label = { Text("Updates") },
                                 alwaysShowLabel = true,
                             )
@@ -193,6 +196,15 @@ class MainActivity : ComponentActivity() {
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                item {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("About & updates") },
+                        supportingContent = { Text(if (updateStatus.hasPendingUpdate()) "A new update is available" else "Version and update checks") },
+                        leadingContent = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                        trailingContent = { dev.n2k02.updater.N2K02UpdateBadge(updateStatus) },
+                        modifier = Modifier.clickable { showingUpdates = true },
+                    )
+                }
                 item { SpeedCard() }
                 item {
                     AnimatedVisibility(visible = !allowed) {
