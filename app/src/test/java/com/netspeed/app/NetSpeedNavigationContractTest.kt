@@ -43,6 +43,21 @@ class NetSpeedNavigationContractTest {
         assertFalse(settings.contains("Quit NetSpeed"))
     }
 
+    @Test fun quitLivesToTheRightOfSettingsAndStopsOverlay() {
+        val file = screen()
+        val top = file.substringAfter("topBar = {").substringBefore("bottomBar = {")
+        val bar = file.substringAfter("bottomBar = {").substringBefore(") { padding ->")
+        assertFalse("Quit must not appear in the app header", top.contains("quitNetSpeed"))
+        assertTrue("Quit belongs in the bottom bar", bar.contains("label = { Text(\"Quit\") }"))
+        assertTrue("Quit should follow Settings", bar.indexOf("label = { Text(\"Quit\") }") >
+            bar.indexOf("label = { Text(\"Settings\") }"))
+        assertTrue("Quit must reuse the existing stop method", bar.contains("onClick = ::quitNetSpeed"))
+        val shutdown = file.substringAfter("private fun quitNetSpeed()").substringBefore("private fun openOverlayPermission")
+        assertTrue(shutdown.contains("Prefs.setEnabled(this, false)"))
+        assertTrue(shutdown.contains("SpeedService.stop(this)"))
+        assertTrue(shutdown.contains("finishAndRemoveTask()"))
+    }
+
     @Test fun bothBottomTabsRetainTheSharedPageHeader() {
         val content = screen().substringAfter("private fun SettingsScreen()")
             .substringBefore("private fun SettingCard(")
