@@ -148,7 +148,16 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { if (showingUpdates) dev.n2k02.updater.N2K02UpdateTitle() else Text("NetSpeed") },
+                    title = {
+                    if (showingUpdates) dev.n2k02.updater.N2K02UpdateTitle()
+                    else Text("Settings")
+                },
+                actions = {
+                    if (!showingUpdates) {
+                        dev.n2k02.updater.N2K02AppIcon(Modifier.size(26.dp))
+                        Text("NetSpeed", modifier = Modifier.padding(start = 8.dp, end = 12.dp))
+                    }
+                },
                     navigationIcon = {},
                 )
             },
