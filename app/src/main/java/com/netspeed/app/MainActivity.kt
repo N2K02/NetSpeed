@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.NavigationBar
@@ -150,15 +151,24 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = {
-                    if (showingUpdates) dev.n2k02.updater.N2K02UpdateTitle()
-                    else Text("Settings")
-                },
-                actions = {
-                    if (!showingUpdates) {
-                        dev.n2k02.updater.N2K02AppIcon(Modifier.size(26.dp))
-                        Text("NetSpeed", modifier = Modifier.padding(start = 8.dp, end = 12.dp))
-                    }
-                },
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Icon(
+                                if (showingUpdates) Icons.Rounded.SystemUpdate else Icons.Rounded.SettingsIcon,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Text(if (showingUpdates) "About & updates" else "Settings")
+                        }
+                    },
+                    actions = {
+                        dev.n2k02.updater.N2K02AppIcon(Modifier.size(28.dp))
+                        Text("NetSpeed", modifier = Modifier.padding(start = 8.dp, end = 12.dp),
+                            style = MaterialTheme.typography.titleMedium)
+                    },
                     navigationIcon = {},
                 )
             },
