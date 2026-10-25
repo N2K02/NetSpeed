@@ -225,16 +225,23 @@ class MainActivity : ComponentActivity() {
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
             } else if (showingSettings) {
-                // Settings is a navigation page, not a duplicate of the Home meter controls.
+                // Same mRadio Settings typography, alignment and section spacing.
+                // NetSpeed intentionally has only one submenu: About & updates.
                 LazyColumn(
                     contentPadding = PaddingValues(
-                        start = 16.dp, end = 16.dp,
+                        start = 12.dp, end = 12.dp,
                         top = padding.calculateTopPadding() + 8.dp,
                         bottom = padding.calculateBottomPadding() + 24.dp,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     item {
+                        Text(
+                            "App information",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 12.dp),
+                        )
                         androidx.compose.material3.ListItem(
                             headlineContent = { Text("About & updates") },
                             supportingContent = {
