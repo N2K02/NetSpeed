@@ -216,85 +216,49 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
-            } else if (!showingSettings) LazyColumn(
-                contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 24.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item { SpeedCard() }
-                item { EnableCard() }
-                item {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("Settings") },
-                        supportingContent = { Text("Overlay appearance, position, refresh rate and updates") },
-                        leadingContent = { Icon(Icons.Rounded.SettingsIcon, contentDescription = null) },
-                        modifier = Modifier.clickable { showingSettings = true },
-                    )
-                }
-            } else LazyColumn(
-                contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 24.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("About & updates") },
-                        supportingContent = { Text(if (updateStatus.hasPendingUpdate()) "A new update is available" else "Version and update checks") },
-                        leadingContent = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
-                        trailingContent = { dev.n2k02.updater.N2K02UpdateBadge(updateStatus) },
-                        modifier = Modifier.clickable { showingUpdates = true },
-                    )
-                }
-                item { SpeedCard() }
-                item {
-                    AnimatedVisibility(visible = !allowed) {
-                        ActionCard(
-                            text = "Allow NetSpeed to display over other apps so it can show the speed in the status bar.",
-                            onClick = ::openOverlayPermission,
-                            error = true,
+            } else if (showingSettings) {
+                // Settings is a navigation page, not a duplicate of the Home meter controls.
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("About & updates") },
+                            supportingContent = {
+                                Text(if (updateStatus.hasPendingUpdate()) "A new update is available" else "Version and update checks")
+                            },
+                            leadingContent = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                            trailingContent = { dev.n2k02.updater.N2K02UpdateBadge(updateStatus) },
+                            modifier = Modifier.clickable { showingUpdates = true },
                         )
                     }
                 }
-                item { EnableCard() }
-                item {
-                    SettingCard {
-                        Text("Quit NetSpeed", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Stops the floating speed meter and closes NetSpeed. Open the app again and turn the meter back on when you want to resume it.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = ::quitNetSpeed, shapes = ButtonDefaults.shapes()) {
-                            Text("Quit NetSpeed")
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { SpeedCard() }
+                    item { EnableCard() }
+                    // First-run permission must remain accessible without a Settings shortcut.
+                    item {
+                        AnimatedVisibility(visible = !allowed) {
+                            ActionCard(
+                                text = "Allow NetSpeed to display over other apps so it can show the speed in the status bar.",
+                                onClick = ::openOverlayPermission,
+                                error = true,
+                            )
                         }
                     }
-                }
-                item { PositionCard() }
-                item { LookCard() }
-                item {
-                    AnimatedVisibility(visible = !batteryOk) {
-                        ActionCard(
-                            title = "Keep running in the background",
-                            text = "Stops Android from pausing NetSpeed to save battery.",
-                            onClick = ::openBatterySetting,
-                        )
-                    }
-                }
-                item {
-                    Text(
-                        "Speed for the whole phone, rounded to a whole number. Kb = kilobits, Mb = megabits " +
-                            "per second. Shows 0 Kb when there is no internet. No notification is used.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                    )
                 }
             }
         }
