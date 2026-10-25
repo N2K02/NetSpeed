@@ -177,7 +177,7 @@ class MainActivity : ComponentActivity() {
                             NavigationBarItem(
                                 selected = showingUpdates,
                                 onClick = { showingUpdates = true },
-                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SystemUpdate, contentDescription = "Updates") } },
+                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = "Updates") },
                                 label = { Text("Updates") },
                                 alwaysShowLabel = true,
                             )
