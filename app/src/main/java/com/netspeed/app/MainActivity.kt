@@ -148,7 +148,7 @@ class MainActivity : ComponentActivity() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(if (showingUpdates) "About & updates" else "NetSpeed") },
+                    title = { if (showingUpdates) dev.n2k02.updater.N2K02UpdateTitle() else Text("NetSpeed") },
                     navigationIcon = {},
                 )
             },
@@ -187,7 +187,7 @@ class MainActivity : ComponentActivity() {
             },
         ) { padding ->
             if (showingUpdates) {
-                UpdatesPage(modifier = Modifier.padding(padding).padding(horizontal = 16.dp))
+                UpdatesPage(modifier = Modifier.padding(padding))
             } else LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
