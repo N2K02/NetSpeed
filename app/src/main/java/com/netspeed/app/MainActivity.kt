@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
     private var textSize by mutableIntStateOf(11)
     private var whiteText by mutableStateOf(true)
     private var showingUpdates by mutableStateOf(false)
+    private var showingSettings by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -147,6 +149,8 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
+        BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
+        BackHandler(enabled = showingSettings && !showingUpdates) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -156,12 +160,16 @@ class MainActivity : ComponentActivity() {
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Icon(
-                                if (showingUpdates) Icons.Rounded.SystemUpdate else Icons.Rounded.SettingsIcon,
+                                when {
+                                    showingUpdates -> Icons.Rounded.SystemUpdate
+                                    showingSettings -> Icons.Rounded.SettingsIcon
+                                    else -> Icons.Rounded.Home
+                                },
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp),
                             )
-                            Text(if (showingUpdates) "About & updates" else "Settings")
+                            Text(if (showingUpdates) "About & updates" else if (showingSettings) "Settings" else "Home")
                         }
                     },
                     actions = {
@@ -188,17 +196,17 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates,
-                                onClick = { showingUpdates = false },
-                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.Home, contentDescription = "Settings") } },
-                                label = { Text("Settings") },
+                                selected = !showingUpdates && !showingSettings,
+                                onClick = { showingUpdates = false; showingSettings = false },
+                                icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
+                                label = { Text("Home") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingUpdates,
-                                onClick = { showingUpdates = true },
-                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = "Updates") },
-                                label = { Text("Updates") },
+                                selected = showingSettings || showingUpdates,
+                                onClick = { showingUpdates = false; showingSettings = true },
+                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
+                                label = { Text("Settings") },
                                 alwaysShowLabel = true,
                             )
                         }
@@ -208,6 +216,24 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
+            } else if (!showingSettings) LazyColumn(
+                contentPadding = PaddingValues(
+                    start = 16.dp, end = 16.dp,
+                    top = padding.calculateTopPadding() + 8.dp,
+                    bottom = padding.calculateBottomPadding() + 24.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                item { SpeedCard() }
+                item { EnableCard() }
+                item {
+                    androidx.compose.material3.ListItem(
+                        headlineContent = { Text("Settings") },
+                        supportingContent = { Text("Overlay appearance, position, refresh rate and updates") },
+                        leadingContent = { Icon(Icons.Rounded.SettingsIcon, contentDescription = null) },
+                        modifier = Modifier.clickable { showingSettings = true },
+                    )
+                }
             } else LazyColumn(
                 contentPadding = PaddingValues(
                     start = 16.dp, end = 16.dp,
