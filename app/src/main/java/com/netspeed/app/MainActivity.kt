@@ -6,12 +6,15 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
@@ -29,6 +32,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +79,7 @@ class MainActivity : ComponentActivity() {
     private var textSize by mutableIntStateOf(11)
     private var whiteText by mutableStateOf(true)
     private var showingUpdates by mutableStateOf(false)
+    private var showingSettings by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -145,10 +150,34 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
+        BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
+        BackHandler(enabled = showingSettings && !showingUpdates) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { if (showingUpdates) dev.n2k02.updater.N2K02UpdateTitle() else Text("NetSpeed") },
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Icon(
+                                when {
+                                    showingUpdates -> Icons.Rounded.SystemUpdate
+                                    showingSettings -> Icons.Rounded.SettingsIcon
+                                    else -> Icons.Rounded.Home
+                                },
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Text(if (showingUpdates) "About & updates" else if (showingSettings) "Settings" else "Home")
+                        }
+                    },
+                    actions = {
+                        dev.n2k02.updater.N2K02AppIcon(Modifier.size(28.dp))
+                        Text("NetSpeed", modifier = Modifier.padding(start = 8.dp, end = 12.dp),
+                            style = MaterialTheme.typography.titleMedium)
+                    },
                     navigationIcon = {},
                 )
             },
@@ -168,17 +197,24 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates,
-                                onClick = { showingUpdates = false },
-                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.Home, contentDescription = "Settings") } },
+                                selected = !showingUpdates && !showingSettings,
+                                onClick = { showingUpdates = false; showingSettings = false },
+                                icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
+                                label = { Text("Home") },
+                                alwaysShowLabel = true,
+                            )
+                            NavigationBarItem(
+                                selected = showingSettings || showingUpdates,
+                                onClick = { showingUpdates = false; showingSettings = true },
+                                icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingUpdates,
-                                onClick = { showingUpdates = true },
-                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = "Updates") },
-                                label = { Text("Updates") },
+                                selected = false,
+                                onClick = ::quitNetSpeed,
+                                icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = "Quit") },
+                                label = { Text("Quit") },
                                 alwaysShowLabel = true,
                             )
                         }
@@ -188,67 +224,56 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
-            } else LazyColumn(
-                contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + 24.dp,
-                ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item {
-                    androidx.compose.material3.ListItem(
-                        headlineContent = { Text("About & updates") },
-                        supportingContent = { Text(if (updateStatus.hasPendingUpdate()) "A new update is available" else "Version and update checks") },
-                        leadingContent = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
-                        trailingContent = { dev.n2k02.updater.N2K02UpdateBadge(updateStatus) },
-                        modifier = Modifier.clickable { showingUpdates = true },
-                    )
-                }
-                item { SpeedCard() }
-                item {
-                    AnimatedVisibility(visible = !allowed) {
-                        ActionCard(
-                            text = "Allow NetSpeed to display over other apps so it can show the speed in the status bar.",
-                            onClick = ::openOverlayPermission,
-                            error = true,
+            } else if (showingSettings) {
+                // Same mRadio Settings typography, alignment and section spacing.
+                // NetSpeed intentionally has only one submenu: About & updates.
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 12.dp, end = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    item {
+                        Text(
+                            "App information",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 12.dp),
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("About & updates") },
+                            supportingContent = {
+                                Text(if (updateStatus.hasPendingUpdate()) "A new update is available" else "Version and update checks")
+                            },
+                            leadingContent = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null) },
+                            trailingContent = { dev.n2k02.updater.N2K02UpdateBadge(updateStatus) },
+                            modifier = Modifier.clickable { showingUpdates = true },
                         )
                     }
                 }
-                item { EnableCard() }
-                item {
-                    SettingCard {
-                        Text("Quit NetSpeed", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Stops the floating speed meter and closes NetSpeed. Open the app again and turn the meter back on when you want to resume it.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = ::quitNetSpeed, shapes = ButtonDefaults.shapes()) {
-                            Text("Quit NetSpeed")
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 16.dp, end = 16.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { SpeedCard() }
+                    item { EnableCard() }
+                    // First-run permission must remain accessible without a Settings shortcut.
+                    item {
+                        AnimatedVisibility(visible = !allowed) {
+                            ActionCard(
+                                text = "Allow NetSpeed to display over other apps so it can show the speed in the status bar.",
+                                onClick = ::openOverlayPermission,
+                                error = true,
+                            )
                         }
                     }
-                }
-                item { PositionCard() }
-                item { LookCard() }
-                item {
-                    AnimatedVisibility(visible = !batteryOk) {
-                        ActionCard(
-                            title = "Keep running in the background",
-                            text = "Stops Android from pausing NetSpeed to save battery.",
-                            onClick = ::openBatterySetting,
-                        )
-                    }
-                }
-                item {
-                    Text(
-                        "Speed for the whole phone, rounded to a whole number. Kb = kilobits, Mb = megabits " +
-                            "per second. Shows 0 Kb when there is no internet. No notification is used.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                    )
                 }
             }
         }
