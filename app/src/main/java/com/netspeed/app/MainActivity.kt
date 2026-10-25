@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Surface
@@ -207,6 +208,13 @@ class MainActivity : ComponentActivity() {
                                 onClick = { showingUpdates = false; showingSettings = true },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
+                                alwaysShowLabel = true,
+                            )
+                            NavigationBarItem(
+                                selected = false,
+                                onClick = ::quitNetSpeed,
+                                icon = { Icon(Icons.Rounded.PowerSettingsNew, contentDescription = "Quit") },
+                                label = { Text("Quit") },
                                 alwaysShowLabel = true,
                             )
                         }
