@@ -20,6 +20,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="NetSpeed"
         android:theme="@style/Theme.NetSpeed">
+        <activity android:name="com.netspeed.app.LogsActivity" android:exported="false" android:label="Logs" />
         <provider android:name="com.netspeed.app.CrashJournalProvider" android:authorities="${applicationId}.crashjournal" android:exported="false" android:initOrder="100" />
 
 
