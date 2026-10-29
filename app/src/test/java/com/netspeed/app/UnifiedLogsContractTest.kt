@@ -28,4 +28,13 @@ class UnifiedLogsContractTest {
             LogEventOrdering.merge(saved, activity, "2026-10-29"))
     }
 
+    @Test fun runtimeEmitsPrivacySafeLifecycleEvents() {
+        val path = "app/src/main/java/com/netspeed/app/SpeedService.kt"
+        val activity = listOf(File(path), File("../$path")).first { it.isFile }.readText()
+        assertTrue(activity.contains("BACKGROUND_START_REJECTED"))
+        assertTrue(activity.contains("OVERLAY_PERMISSION_OR_START_FAILED"))
+        assertTrue(activity.contains("METER_STOP_REQUESTED"))
+        assertFalse(activity.contains("AppLog.add(\"CAST\", e.message"))
+    }
+
 }
