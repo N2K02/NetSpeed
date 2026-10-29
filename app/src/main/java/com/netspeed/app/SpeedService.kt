@@ -14,10 +14,13 @@ class SpeedService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        AppLog.init(applicationContext)
         if (!Prefs.enabled(this) || !SpeedOverlay.start(this)) {
+            AppLog.add("SERVICE", "METER_START_REJECTED")
             stopSelf()
             return START_NOT_STICKY
         }
+        AppLog.add("SERVICE", "METER_RUNNING")
         return START_STICKY
     }
 
@@ -33,15 +36,23 @@ class SpeedService : Service() {
             val ctx = context.applicationContext
             // Show the overlay first: a visible overlay counts as "in use", which
             // is what allows a background service to be started at all.
-            if (!SpeedOverlay.start(ctx)) return false
-            runCatching { ctx.startService(Intent(ctx, SpeedService::class.java)) }
-            return true
+            AppLog.init(ctx)
+            if (!SpeedOverlay.start(ctx)) {
+                AppLog.add("SERVICE", "OVERLAY_PERMISSION_OR_START_FAILED")
+                return false
+            }
+            val started = runCatching { ctx.startService(Intent(ctx, SpeedService::class.java)) }
+                .onFailure { AppLog.add("SERVICE", "BACKGROUND_START_REJECTED") }.isSuccess
+            if (!started) SpeedOverlay.stop()
+            return started
         }
 
         fun stop(context: Context) {
             val ctx = context.applicationContext
+            AppLog.add("SERVICE", "METER_STOP_REQUESTED")
             SpeedOverlay.stop()
             runCatching { ctx.stopService(Intent(ctx, SpeedService::class.java)) }
+                .onFailure { AppLog.add("SERVICE", "METER_STOP_FAILED") }
         }
     }
 }
