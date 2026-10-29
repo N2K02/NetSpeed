@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
@@ -166,7 +167,7 @@ class MainActivity : ComponentActivity() {
                             Icon(
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
-                                    showingLogs -> Icons.Rounded.SettingsIcon
+                                    showingLogs -> Icons.Rounded.Article
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
                                 },
@@ -251,6 +252,7 @@ class MainActivity : ComponentActivity() {
                         androidx.compose.material3.ListItem(
                             headlineContent = { Text("Logs") },
                             supportingContent = { Text("Private diagnostic and crash history") },
+                            leadingContent = { Icon(Icons.Rounded.Article, contentDescription = null) },
                             modifier = Modifier.clickable { showingLogs = true; showingSettings = false },
                         )
                         androidx.compose.material3.ListItem(
