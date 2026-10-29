@@ -227,8 +227,7 @@ class MainActivity : ComponentActivity() {
             },
         ) { padding ->
             if (showingLogs) {
-                NetSpeedLogsPage(modifier = Modifier.fillMaxSize().padding(padding),
-                    onBack = { showingLogs = false; showingSettings = true })
+                NetSpeedLogsPage(modifier = Modifier.fillMaxSize().padding(padding))
             } else if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
             } else if (showingSettings) {
