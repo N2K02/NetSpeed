@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private var whiteText by mutableStateOf(true)
     private var showingUpdates by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
+    private var showingLogs by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -150,8 +151,9 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
+        BackHandler(enabled = showingLogs) { showingLogs = false; showingSettings = true }
         BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
-        BackHandler(enabled = showingSettings && !showingUpdates) { showingSettings = false }
+        BackHandler(enabled = showingSettings && !showingUpdates && !showingLogs) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -163,6 +165,7 @@ class MainActivity : ComponentActivity() {
                             Icon(
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
+                                    showingLogs -> Icons.Rounded.SettingsIcon
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
                                 },
@@ -170,7 +173,7 @@ class MainActivity : ComponentActivity() {
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp),
                             )
-                            Text(if (showingUpdates) "About & updates" else if (showingSettings) "Settings" else "Home")
+                            Text(if (showingUpdates) "About & updates" else if (showingLogs) "Logs" else if (showingSettings) "Settings" else "Home")
                         }
                     },
                     actions = {
@@ -197,15 +200,15 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates && !showingSettings,
-                                onClick = { showingUpdates = false; showingSettings = false },
+                                selected = !showingUpdates && !showingSettings && !showingLogs,
+                                onClick = { showingUpdates = false; showingSettings = false; showingLogs = false },
                                 icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingSettings || showingUpdates,
-                                onClick = { showingUpdates = false; showingSettings = true },
+                                selected = showingSettings || showingUpdates || showingLogs,
+                                onClick = { showingUpdates = false; showingSettings = true; showingLogs = false },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
@@ -222,7 +225,10 @@ class MainActivity : ComponentActivity() {
                 }
             },
         ) { padding ->
-            if (showingUpdates) {
+            if (showingLogs) {
+                NetSpeedLogsPage(modifier = Modifier.fillMaxSize().padding(padding),
+                    onBack = { showingLogs = false; showingSettings = true })
+            } else if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
             } else if (showingSettings) {
                 // Same mRadio Settings typography, alignment and section spacing.
@@ -242,14 +248,10 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 12.dp),
                         )
-                        val logScreenContext = androidx.compose.ui.platform.LocalContext.current
                         androidx.compose.material3.ListItem(
                             headlineContent = { Text("Logs") },
                             supportingContent = { Text("Private diagnostic and crash history") },
-                            modifier = Modifier.clickable {
-                                val app = logScreenContext
-                                app.startActivity(android.content.Intent(app, com.netspeed.app.LogsActivity::class.java))
-                            },
+                            modifier = Modifier.clickable { showingLogs = true; showingSettings = false },
                         )
                         androidx.compose.material3.ListItem(
                             headlineContent = { Text("About & updates") },
