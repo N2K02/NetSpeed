@@ -242,6 +242,15 @@ class MainActivity : ComponentActivity() {
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 12.dp),
                         )
+                        val logScreenContext = androidx.compose.ui.platform.LocalContext.current
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Logs") },
+                            supportingContent = { Text("Private diagnostic and crash history") },
+                            modifier = Modifier.clickable {
+                                val app = logScreenContext
+                                app.startActivity(android.content.Intent(app, com.netspeed.app.LogsActivity::class.java))
+                            },
+                        )
                         androidx.compose.material3.ListItem(
                             headlineContent = { Text("About & updates") },
                             supportingContent = {
