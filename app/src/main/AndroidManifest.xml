@@ -20,7 +20,6 @@
         android:icon="@mipmap/ic_launcher"
         android:label="NetSpeed"
         android:theme="@style/Theme.NetSpeed">
-        <provider android:name="com.netspeed.app.CrashJournalProvider" android:authorities="${applicationId}.crashjournal" android:exported="false" android:initOrder="100" />
 
 
         <activity
