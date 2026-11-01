@@ -192,6 +192,9 @@ object SpeedOverlay {
     private fun composed() = "↓ $lastDown  ↑ $lastUp"
 
     private fun show(down: String, up: String) {
+        // No text/layout invalidation when rounded traffic values are unchanged.
+        // Sampling still runs at the user-selected rate while screen is on.
+        if (lastDown == down && lastUp == up) return
         lastDown = down
         lastUp = up
         view?.text = composed()
