@@ -26,6 +26,7 @@ class SpeedService : Service() {
             promoteToForeground()
         } catch (error: Exception) {
             AppLog.add("SERVICE", "FOREGROUND_START_FAILED")
+            SpeedOverlay.stop()
             stopSelf()
             return START_NOT_STICKY
         }
