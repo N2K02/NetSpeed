@@ -433,25 +433,6 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun LookCard() = SettingCard {
-        Text("Refresh every", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        LabelWithValue("Update interval", "$interval sec")
-        Slider(
-            value = interval.toFloat(),
-            onValueChange = { value ->
-                interval = value.toInt().coerceIn(1, 10)
-                Prefs.setIntervalSec(this@MainActivity, interval)
-                SpeedOverlay.applySettings()
-            },
-            valueRange = 1f..10f,
-            steps = 8,
-        )
-        Text(
-            "Choose how often NetSpeed samples traffic. Longer intervals use less battery.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(20.dp))
         Text("Text size", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Choice(listOf(10 to "Small", 11 to "Medium", 13 to "Large"), textSize) {
