@@ -26,7 +26,8 @@ class NetSpeedNavigationContractTest {
     @Test fun homeHasLiveControlsButNoDuplicateSettingsShortcut() {
         val (home, _) = pages()
         assertTrue(home.contains("item { SpeedCard() }"))
-        assertTrue(home.contains("item { EnableCard() }"))
+        assertFalse(home.contains("EnableCard()"))
+        assertFalse(home.contains("Show in status bar"))
         assertTrue(home.contains("openOverlayPermission"))
         assertFalse(home.contains("headlineContent = { Text(\"Settings\") }"))
         assertFalse(home.contains("About & updates"))
@@ -38,6 +39,7 @@ class NetSpeedNavigationContractTest {
         assertTrue(settings.contains("showingUpdates = true"))
         assertFalse(settings.contains("SpeedCard()"))
         assertFalse(settings.contains("EnableCard()"))
+        assertFalse(settings.contains("Refresh every"))
         assertFalse(settings.contains("PositionCard()"))
         assertFalse(settings.contains("LookCard()"))
         assertFalse(settings.contains("Quit NetSpeed"))
