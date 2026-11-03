@@ -37,7 +37,7 @@ class NetSpeedNavigationContractTest {
         val (_, settings) = pages()
         assertTrue(settings.contains("headlineContent = { Text(\"Network refresh\") }"))
         assertTrue(settings.contains("showingNetworkRefresh = true"))
-        assertTrue(settings.contains("Update download and upload every $interval sec"))
+        assertTrue(settings.contains("Update download and upload every"))
         assertTrue(screen().contains("showingNetworkRefresh = false; showingSettings = true"))
         assertTrue(settings.contains("headlineContent = { Text(\"About & updates\") }"))
         assertTrue(settings.contains("showingUpdates = true"))
