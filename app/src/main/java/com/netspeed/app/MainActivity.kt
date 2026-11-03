@@ -198,8 +198,8 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates && !showingSettings,
-                                onClick = { showingUpdates = false; showingSettings = false },
+                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingSettings = false },
                                 icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 alwaysShowLabel = true,
