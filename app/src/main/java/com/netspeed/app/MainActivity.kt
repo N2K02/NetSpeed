@@ -82,6 +82,8 @@ class MainActivity : ComponentActivity() {
     private var showingUpdates by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
     private var showingNetworkRefresh by mutableStateOf(false)
+    private var showingStartup by mutableStateOf(false)
+    private var startOnBoot by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -113,6 +115,7 @@ class MainActivity : ComponentActivity() {
         interval = Prefs.intervalSec(this)
         textSize = Prefs.textSize(this)
         whiteText = Prefs.whiteText(this)
+        startOnBoot = Prefs.startOnBoot(this)
     }
 
     private fun refresh() {
@@ -145,8 +148,9 @@ class MainActivity : ComponentActivity() {
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
         BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
+        BackHandler(enabled = showingStartup) { showingStartup = false; showingSettings = true }
         BackHandler(enabled = showingNetworkRefresh) { showingNetworkRefresh = false; showingSettings = true }
-        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh) { showingSettings = false }
+        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh && !showingStartup) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -159,6 +163,7 @@ class MainActivity : ComponentActivity() {
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
                                     showingNetworkRefresh -> Icons.Rounded.Refresh
+                                    showingStartup -> Icons.Rounded.Article
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
                                 },
@@ -169,6 +174,7 @@ class MainActivity : ComponentActivity() {
                             Text(when {
                                 showingUpdates -> "About & updates"
                                 showingNetworkRefresh -> "Network refresh"
+                                showingStartup -> "Startup"
                                 showingSettings -> "Settings"
                                 else -> "Home"
                             })
@@ -198,15 +204,15 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh,
-                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingSettings = false },
+                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh && !showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = false },
                                 icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingSettings || showingUpdates || showingNetworkRefresh,
-                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingSettings = true },
+                                selected = showingSettings || showingUpdates || showingNetworkRefresh || showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = true },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
@@ -225,6 +231,22 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
+            } else if (showingStartup) {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = padding.calculateTopPadding() + 8.dp, bottom = padding.calculateBottomPadding() + 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            androidx.compose.material3.ListItem(
+                                headlineContent = { Text("Start on boot") },
+                                supportingContent = { Text("Automatically restart the network meter after your phone restarts") },
+                                leadingContent = { Icon(Icons.Rounded.Article, contentDescription = null) },
+                                trailingContent = { Switch(checked = startOnBoot, onCheckedChange = { startOnBoot = it; Prefs.setStartOnBoot(this@MainActivity, it) }) },
+                            )
+                        }
+                    }
+                }
             } else if (showingNetworkRefresh) {
                 LazyColumn(
                     contentPadding = PaddingValues(
@@ -260,8 +282,18 @@ class MainActivity : ComponentActivity() {
                             trailingContent = { Text("${interval}s", color = MaterialTheme.colorScheme.primary) },
                             modifier = Modifier.clickable {
                                 showingNetworkRefresh = true
+                                showingStartup = false
                                 showingSettings = false
                             },
+                        )
+                    }
+                    item {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Startup") },
+                            supportingContent = { Text(if (startOnBoot) "Starts automatically after reboot" else "Manual start after reboot") },
+                            leadingContent = { Icon(Icons.Rounded.Article, contentDescription = null) },
+                            trailingContent = { Text("›", color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable { showingStartup = true; showingSettings = false },
                         )
                     }
                     item {
