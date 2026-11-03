@@ -74,7 +74,6 @@ class MainActivity : ComponentActivity() {
     private var allowed by mutableStateOf(false)
     private var running by mutableStateOf(false)
     private var batteryOk by mutableStateOf(true)
-    private var enabled by mutableStateOf(true)
     private var hPos by mutableFloatStateOf(Prefs.H_DEFAULT.toFloat())
     private var vPos by mutableFloatStateOf(0f)
     private var interval by mutableIntStateOf(1)
@@ -87,6 +86,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         LiveUpdater.init(this)
+        // The status-bar meter is always enabled when the app is opened; Quit still stops it.
+        Prefs.setEnabled(this, true)
         loadPrefs()
         setContent { NetSpeedTheme { SettingsScreen() } }
     }
@@ -106,7 +107,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadPrefs() {
-        enabled = Prefs.enabled(this)
         hPos = Prefs.position(this).toFloat().coerceIn(H_MIN, 1000f)
         vPos = Prefs.verticalDp(this).toFloat()
         interval = Prefs.intervalSec(this)
@@ -123,15 +123,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun setEnabledPref(on: Boolean) {
-        enabled = on
-        Prefs.setEnabled(this, on)
-        if (on) SpeedService.start(this) else SpeedService.stop(this)
-        refresh()
-    }
-
     private fun quitNetSpeed() {
         Prefs.setEnabled(this, false)
-        enabled = false
         SpeedService.stop(this)
         finishAndRemoveTask()
     }
@@ -266,7 +259,6 @@ class MainActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { SpeedCard() }
-                    item { EnableCard() }
                     // First-run permission must remain accessible without a Settings shortcut.
                     item {
                         AnimatedVisibility(visible = !allowed) {
@@ -329,25 +321,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    private fun EnableCard() = SettingCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Show in status bar", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when {
-                        !allowed -> "Needs permission first"
-                        running -> "Running in the background"
-                        else -> "Off"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = enabled && allowed, onCheckedChange = ::setEnabledPref, enabled = allowed)
-        }
-    }
-
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     private fun PositionCard() = SettingCard {
@@ -402,9 +375,22 @@ class MainActivity : ComponentActivity() {
     private fun LookCard() = SettingCard {
         Text("Refresh every", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
-        Choice(listOf(1 to "1 sec", 2 to "2 sec", 3 to "3 sec"), interval) {
-            interval = it; Prefs.setIntervalSec(this@MainActivity, it); SpeedOverlay.applySettings()
-        }
+        LabelWithValue("Update interval", "$interval sec")
+        Slider(
+            value = interval.toFloat(),
+            onValueChange = { value ->
+                interval = value.toInt().coerceIn(1, 10)
+                Prefs.setIntervalSec(this@MainActivity, interval)
+                SpeedOverlay.applySettings()
+            },
+            valueRange = 1f..10f,
+            steps = 8,
+        )
+        Text(
+            "Choose how often NetSpeed samples traffic. Longer intervals use less battery.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(20.dp))
         Text("Text size", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
