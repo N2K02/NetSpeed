@@ -33,13 +33,15 @@ class NetSpeedNavigationContractTest {
         assertFalse(home.contains("About & updates"))
     }
 
-    @Test fun settingsContainsOnlyTheUpdatesSubmenu() {
+    @Test fun settingsContainsNetworkRefreshAndUpdatesSubmenus() {
         val (_, settings) = pages()
+        assertTrue(settings.contains("headlineContent = { Text(\"Network refresh\") }"))
+        assertTrue(settings.contains("showingNetworkRefresh = true"))
         assertTrue(settings.contains("headlineContent = { Text(\"About & updates\") }"))
         assertTrue(settings.contains("showingUpdates = true"))
         assertFalse(settings.contains("SpeedCard()"))
         assertFalse(settings.contains("EnableCard()"))
-        assertFalse(settings.contains("Refresh every"))
+        assertFalse(settings.contains("Refresh interval"))
         assertFalse(settings.contains("PositionCard()"))
         assertFalse(settings.contains("LookCard()"))
         assertFalse(settings.contains("Quit NetSpeed"))
