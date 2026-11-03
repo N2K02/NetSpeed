@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
@@ -80,6 +81,7 @@ class MainActivity : ComponentActivity() {
     private var whiteText by mutableStateOf(true)
     private var showingUpdates by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
+    private var showingNetworkRefresh by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -143,7 +145,8 @@ class MainActivity : ComponentActivity() {
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
         BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
-        BackHandler(enabled = showingSettings && !showingUpdates) { showingSettings = false }
+        BackHandler(enabled = showingNetworkRefresh) { showingNetworkRefresh = false; showingSettings = true }
+        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -155,6 +158,7 @@ class MainActivity : ComponentActivity() {
                             Icon(
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
+                                    showingNetworkRefresh -> Icons.Rounded.Refresh
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
                                 },
@@ -162,7 +166,12 @@ class MainActivity : ComponentActivity() {
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp),
                             )
-                            Text(if (showingUpdates) "About & updates" else if (showingSettings) "Settings" else "Home")
+                            Text(when {
+                                showingUpdates -> "About & updates"
+                                showingNetworkRefresh -> "Network refresh"
+                                showingSettings -> "Settings"
+                                else -> "Home"
+                            })
                         }
                     },
                     actions = {
@@ -196,8 +205,8 @@ class MainActivity : ComponentActivity() {
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingSettings || showingUpdates,
-                                onClick = { showingUpdates = false; showingSettings = true },
+                                selected = showingSettings || showingUpdates || showingNetworkRefresh,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingSettings = true },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
@@ -216,9 +225,19 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
+            } else if (showingNetworkRefresh) {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 12.dp, end = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { NetworkRefreshCard() }
+                }
             } else if (showingSettings) {
                 // Same mRadio Settings typography, alignment and section spacing.
-                // NetSpeed intentionally has only one submenu: About & updates.
                 LazyColumn(
                     contentPadding = PaddingValues(
                         start = 12.dp, end = 12.dp,
@@ -227,6 +246,24 @@ class MainActivity : ComponentActivity() {
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    item {
+                        Text(
+                            "Network",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 8.dp),
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Network refresh") },
+                            supportingContent = { Text("Update download and upload every $interval sec") },
+                            leadingContent = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                            trailingContent = { Text("${interval}s", color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                showingNetworkRefresh = true
+                                showingSettings = false
+                            },
+                        )
+                    }
                     item {
                         Text(
                             "App information",
@@ -365,6 +402,32 @@ class MainActivity : ComponentActivity() {
         Row {
             Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             Text(value, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        }
+    }
+
+    @Composable
+    private fun NetworkRefreshCard() = SettingCard {
+        Text("Network refresh", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Choose how often download and upload speeds are sampled and shown in the status bar.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        LabelWithValue("Refresh interval", "$interval sec")
+        Slider(
+            value = interval.toFloat(),
+            onValueChange = { value ->
+                interval = value.toInt().coerceIn(1, 10)
+                Prefs.setIntervalSec(this@MainActivity, interval)
+                SpeedOverlay.applySettings()
+            },
+            valueRange = 1f..10f,
+            steps = 8,
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("1 sec", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("10 sec", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 
