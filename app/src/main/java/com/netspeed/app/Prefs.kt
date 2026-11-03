@@ -12,6 +12,9 @@ object Prefs {
 
     /** Whether the speed meter should be running. On by default once permission is granted. */
     fun enabled(ctx: Context) = sp(ctx).getBoolean("enabled", true)
+    /** Whether Android should restart the meter after device boot or app replacement. */
+    fun startOnBoot(ctx: Context) = sp(ctx).getBoolean("start_on_boot", true)
+    fun setStartOnBoot(ctx: Context, value: Boolean) = sp(ctx).edit().putBoolean("start_on_boot", value).apply()
     fun setEnabled(ctx: Context, v: Boolean) = sp(ctx).edit().putBoolean("enabled", v).apply()
 
     /** Refresh interval in seconds: 1–10 (default 2). */
