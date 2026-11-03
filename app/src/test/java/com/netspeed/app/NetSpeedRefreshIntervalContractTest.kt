@@ -19,6 +19,7 @@ class NetSpeedRefreshIntervalContractTest {
     @Test fun refreshIntervalIsClampedToOneThroughTenSeconds() {
         val prefs = source("app/src/main/java/com/netspeed/app/Prefs.kt")
         val main = source("app/src/main/java/com/netspeed/app/MainActivity.kt")
+        assertTrue(prefs.contains("getInt(\"interval\", 2)"))
         assertTrue(prefs.contains("coerceIn(1, 10)"))
         assertTrue(main.contains("valueRange = 1f..10f"))
         assertTrue(main.contains("steps = 8"))
