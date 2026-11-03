@@ -72,7 +72,6 @@ class MainActivity : ComponentActivity() {
     private var down by mutableStateOf(SpeedOverlay.lastDown)
     private var up by mutableStateOf(SpeedOverlay.lastUp)
     private var allowed by mutableStateOf(false)
-    private var running by mutableStateOf(false)
     private var batteryOk by mutableStateOf(true)
     private var hPos by mutableFloatStateOf(Prefs.H_DEFAULT.toFloat())
     private var vPos by mutableFloatStateOf(0f)
@@ -116,13 +115,11 @@ class MainActivity : ComponentActivity() {
 
     private fun refresh() {
         allowed = Settings.canDrawOverlays(this)
-        running = SpeedOverlay.isRunning
         down = SpeedOverlay.lastDown
         up = SpeedOverlay.lastUp
         batteryOk = getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
     }
 
-    private fun setEnabledPref(on: Boolean) {
     private fun quitNetSpeed() {
         Prefs.setEnabled(this, false)
         SpeedService.stop(this)
