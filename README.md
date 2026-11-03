@@ -9,8 +9,8 @@ NetSpeed is a free, open-source Android app that displays live download and uplo
 ## Features
 
 - Shows download and upload speeds for the whole phone.
-- Updates every 1, 2, or 3 seconds.
-- Lets you adjust the overlay position, text size, and text colour.
+- Keeps the status-bar meter on whenever NetSpeed is enabled; choose a 1–10 second refresh interval.
+- Lets you adjust the meter position, refresh interval, text size, and text colour.
 - Pauses while the screen is off to help save battery.
 - Supports light and dark themes.
 - Includes an in-app updater.
