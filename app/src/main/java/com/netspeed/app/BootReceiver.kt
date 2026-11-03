@@ -10,7 +10,10 @@ class BootReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                if (Prefs.enabled(context)) SpeedService.start(context)
+                if (Prefs.startOnBoot(context)) {
+                    Prefs.setEnabled(context, true)
+                    SpeedService.start(context)
+                }
             }
         }
     }
