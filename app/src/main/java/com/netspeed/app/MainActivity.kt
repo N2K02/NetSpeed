@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Article
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
@@ -72,9 +73,7 @@ class MainActivity : ComponentActivity() {
     private var down by mutableStateOf(SpeedOverlay.lastDown)
     private var up by mutableStateOf(SpeedOverlay.lastUp)
     private var allowed by mutableStateOf(false)
-    private var running by mutableStateOf(false)
     private var batteryOk by mutableStateOf(true)
-    private var enabled by mutableStateOf(true)
     private var hPos by mutableFloatStateOf(Prefs.H_DEFAULT.toFloat())
     private var vPos by mutableFloatStateOf(0f)
     private var interval by mutableIntStateOf(1)
@@ -82,11 +81,16 @@ class MainActivity : ComponentActivity() {
     private var whiteText by mutableStateOf(true)
     private var showingUpdates by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
+    private var showingNetworkRefresh by mutableStateOf(false)
+    private var showingStartup by mutableStateOf(false)
+    private var startOnBoot by mutableStateOf(true)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         LiveUpdater.init(this)
+        // The status-bar meter is always enabled when the app is opened; Quit still stops it.
+        Prefs.setEnabled(this, true)
         loadPrefs()
         setContent { NetSpeedTheme { SettingsScreen() } }
     }
@@ -106,32 +110,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadPrefs() {
-        enabled = Prefs.enabled(this)
         hPos = Prefs.position(this).toFloat().coerceIn(H_MIN, 1000f)
         vPos = Prefs.verticalDp(this).toFloat()
         interval = Prefs.intervalSec(this)
         textSize = Prefs.textSize(this)
         whiteText = Prefs.whiteText(this)
+        startOnBoot = Prefs.startOnBoot(this)
     }
 
     private fun refresh() {
         allowed = Settings.canDrawOverlays(this)
-        running = SpeedOverlay.isRunning
         down = SpeedOverlay.lastDown
         up = SpeedOverlay.lastUp
         batteryOk = getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
     }
 
-    private fun setEnabledPref(on: Boolean) {
-        enabled = on
-        Prefs.setEnabled(this, on)
-        if (on) SpeedService.start(this) else SpeedService.stop(this)
-        refresh()
-    }
-
     private fun quitNetSpeed() {
         Prefs.setEnabled(this, false)
-        enabled = false
         SpeedService.stop(this)
         finishAndRemoveTask()
     }
@@ -153,7 +148,9 @@ class MainActivity : ComponentActivity() {
     private fun SettingsScreen() {
         val updateStatus by LiveUpdater.controller.status.collectAsState()
         BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
-        BackHandler(enabled = showingSettings && !showingUpdates) { showingSettings = false }
+        BackHandler(enabled = showingStartup) { showingStartup = false; showingSettings = true }
+        BackHandler(enabled = showingNetworkRefresh) { showingNetworkRefresh = false; showingSettings = true }
+        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh && !showingStartup) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -165,6 +162,8 @@ class MainActivity : ComponentActivity() {
                             Icon(
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
+                                    showingNetworkRefresh -> Icons.Rounded.Refresh
+                                    showingStartup -> Icons.Rounded.Article
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
                                 },
@@ -172,7 +171,13 @@ class MainActivity : ComponentActivity() {
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp),
                             )
-                            Text(if (showingUpdates) "About & updates" else if (showingSettings) "Settings" else "Home")
+                            Text(when {
+                                showingUpdates -> "About & updates"
+                                showingNetworkRefresh -> "Network refresh"
+                                showingStartup -> "Startup"
+                                showingSettings -> "Settings"
+                                else -> "Home"
+                            })
                         }
                     },
                     actions = {
@@ -199,15 +204,15 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates && !showingSettings,
-                                onClick = { showingUpdates = false; showingSettings = false },
+                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh && !showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = false },
                                 icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingSettings || showingUpdates,
-                                onClick = { showingUpdates = false; showingSettings = true },
+                                selected = showingSettings || showingUpdates || showingNetworkRefresh || showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = true },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
@@ -226,9 +231,35 @@ class MainActivity : ComponentActivity() {
         ) { padding ->
             if (showingUpdates) {
                 UpdatesPage(modifier = Modifier.padding(padding))
+            } else if (showingStartup) {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = padding.calculateTopPadding() + 8.dp, bottom = padding.calculateBottomPadding() + 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        Card(Modifier.fillMaxWidth()) {
+                            androidx.compose.material3.ListItem(
+                                headlineContent = { Text("Start on boot") },
+                                supportingContent = { Text("Automatically restart the network meter after your phone restarts") },
+                                leadingContent = { Icon(Icons.Rounded.Article, contentDescription = null) },
+                                trailingContent = { Switch(checked = startOnBoot, onCheckedChange = { startOnBoot = it; Prefs.setStartOnBoot(this@MainActivity, it) }) },
+                            )
+                        }
+                    }
+                }
+            } else if (showingNetworkRefresh) {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 12.dp, end = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item { NetworkRefreshCard() }
+                }
             } else if (showingSettings) {
                 // Same mRadio Settings typography, alignment and section spacing.
-                // NetSpeed intentionally has only one submenu: About & updates.
                 LazyColumn(
                     contentPadding = PaddingValues(
                         start = 12.dp, end = 12.dp,
@@ -237,6 +268,34 @@ class MainActivity : ComponentActivity() {
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
+                    item {
+                        Text(
+                            "Network",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, top = 6.dp, bottom = 8.dp),
+                        )
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Network refresh") },
+                            supportingContent = { Text("Update download and upload every $interval sec") },
+                            leadingContent = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+                            trailingContent = { Text("${interval}s", color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                showingNetworkRefresh = true
+                                showingStartup = false
+                                showingSettings = false
+                            },
+                        )
+                    }
+                    item {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Startup") },
+                            supportingContent = { Text(if (startOnBoot) "Starts automatically after reboot" else "Manual start after reboot") },
+                            leadingContent = { Icon(Icons.Rounded.Article, contentDescription = null) },
+                            trailingContent = { Text("›", color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable { showingStartup = true; showingSettings = false },
+                        )
+                    }
                     item {
                         Text(
                             "App information",
@@ -266,7 +325,6 @@ class MainActivity : ComponentActivity() {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { SpeedCard() }
-                    item { EnableCard() }
                     // First-run permission must remain accessible without a Settings shortcut.
                     item {
                         AnimatedVisibility(visible = !allowed) {
@@ -329,25 +387,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    @Composable
-    private fun EnableCard() = SettingCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Show in status bar", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    when {
-                        !allowed -> "Needs permission first"
-                        running -> "Running in the background"
-                        else -> "Off"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = enabled && allowed, onCheckedChange = ::setEnabledPref, enabled = allowed)
-        }
-    }
-
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     @Composable
     private fun PositionCard() = SettingCard {
@@ -399,13 +438,33 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun LookCard() = SettingCard {
-        Text("Refresh every", style = MaterialTheme.typography.titleMedium)
-        Spacer(Modifier.height(8.dp))
-        Choice(listOf(1 to "1 sec", 2 to "2 sec", 3 to "3 sec"), interval) {
-            interval = it; Prefs.setIntervalSec(this@MainActivity, it); SpeedOverlay.applySettings()
+    private fun NetworkRefreshCard() = SettingCard {
+        Text("Network refresh", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Choose how often download and upload speeds are sampled and shown in the status bar.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        LabelWithValue("Refresh interval", "$interval sec")
+        Slider(
+            value = interval.toFloat(),
+            onValueChange = { value ->
+                interval = value.toInt().coerceIn(1, 10)
+                Prefs.setIntervalSec(this@MainActivity, interval)
+                SpeedOverlay.applySettings()
+            },
+            valueRange = 1f..10f,
+            steps = 8,
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("1 sec", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("10 sec", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Spacer(Modifier.height(20.dp))
+    }
+
+    @Composable
+    private fun LookCard() = SettingCard {
         Text("Text size", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Choice(listOf(10 to "Small", 11 to "Medium", 13 to "Large"), textSize) {

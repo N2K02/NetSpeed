@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Floating speed meter drawn over other apps (no notification needed) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Floating speed meter drawn over other apps -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Know whether there is internet at all (shows 0 D/ 0 U when not) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -32,10 +35,14 @@
             </intent-filter>
         </activity>
 
-        <!-- Plain (non-foreground) service: no notification is ever posted. -->
         <service
             android:name=".SpeedService"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the user-enabled live network speed overlay running" />
+        </service>
 
         <receiver
             android:name=".BootReceiver"
