@@ -22,6 +22,10 @@ class NetSpeedRefreshIntervalContractTest {
         assertTrue(prefs.contains("coerceIn(1, 10)"))
         assertTrue(main.contains("valueRange = 1f..10f"))
         assertTrue(main.contains("steps = 8"))
+        assertTrue(main.contains("item { NetworkRefreshCard() }"))
+        assertTrue(main.contains("Refresh interval"))
+        assertTrue(main.contains("Choose how often download and upload speeds are sampled"))
         assertTrue(main.contains("Prefs.setIntervalSec(this@MainActivity, interval)"))
+        assertTrue(main.contains("SpeedOverlay.applySettings()"))
     }
 }
