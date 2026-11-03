@@ -14,8 +14,8 @@ object Prefs {
     fun enabled(ctx: Context) = sp(ctx).getBoolean("enabled", true)
     fun setEnabled(ctx: Context, v: Boolean) = sp(ctx).edit().putBoolean("enabled", v).apply()
 
-    /** Refresh interval in seconds: 1–10 (default 1). */
-    fun intervalSec(ctx: Context) = sp(ctx).getInt("interval", 1).coerceIn(1, 10)
+    /** Refresh interval in seconds: 1–10 (default 2). */
+    fun intervalSec(ctx: Context) = sp(ctx).getInt("interval", 2).coerceIn(1, 10)
     fun setIntervalSec(ctx: Context, v: Int) = sp(ctx).edit().putInt("interval", v.coerceIn(1, 10)).apply()
 
     /** Text size of the status bar meter in sp. */
