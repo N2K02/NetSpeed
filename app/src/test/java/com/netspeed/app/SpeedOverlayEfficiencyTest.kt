@@ -16,6 +16,7 @@ class SpeedOverlayEfficiencyTest {
         assertTrue(guard >= 0 && change > guard)
         assertTrue(code.contains("Intent.ACTION_SCREEN_OFF ->"))
         assertTrue(code.contains("handler.removeCallbacks(tick)"))
-        assertTrue(code.contains("if (screenOn) handler.postDelayed(this"))
+        assertTrue(code.contains("if (screenOn && statusBarVisible)"))
+        assertTrue(code.contains("if (!screenOn || !statusBarVisible) return"))
     }
 }
