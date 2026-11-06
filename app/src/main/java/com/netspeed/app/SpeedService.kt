@@ -42,7 +42,9 @@ class SpeedService : Service() {
 
     override fun onDestroy() {
         stopForeground(STOP_FOREGROUND_REMOVE)
-        if (!Prefs.enabled(this)) SpeedOverlay.stop()
+        // A stopped foreground host must not leave an orphan polling overlay.
+        // START_STICKY recreates and reattaches it when Android restarts us.
+        SpeedOverlay.stop()
         super.onDestroy()
     }
 
