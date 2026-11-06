@@ -37,6 +37,7 @@ object SpeedOverlay {
     private var params: WindowManager.LayoutParams? = null
     private var meter: SpeedMeter? = null
     private var screenOn = true
+    private var statusBarVisible = true
 
     /** Latest reading, for the settings screen. */
     var lastDown: String = "0 Kb"
@@ -49,12 +50,16 @@ object SpeedOverlay {
 
     private val tick = object : Runnable {
         override fun run() {
+            // The overlay is not visible in immersive fullscreen or with the
+            // screen off; do not query TrafficStats or network capabilities.
+            if (!screenOn || !statusBarVisible) return
             val ctx = app ?: return
             val m = meter ?: return
             val r = m.sample()
             show(SpeedMeter.format(r.downBps), SpeedMeter.format(r.upBps))
             placeIfScreenChanged()
-            if (screenOn) handler.postDelayed(this, Prefs.intervalSec(ctx) * 1000L)
+            if (screenOn && statusBarVisible)
+                handler.postDelayed(this, Prefs.intervalSec(ctx) * 1000L)
         }
     }
 
@@ -70,7 +75,7 @@ object SpeedOverlay {
                     screenOn = true
                     meter?.reset()
                     handler.removeCallbacks(tick)
-                    handler.post(tick)
+                    if (statusBarVisible) handler.post(tick)
                 }
             }
         }
@@ -84,6 +89,10 @@ object SpeedOverlay {
 
         app = ctx
         meter = SpeedMeter(ctx)
+        // Initialize the state before adding the view, since insets callbacks
+        // can fire as soon as WindowManager attaches it.
+        screenOn = (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive
+        statusBarVisible = true
         val windowManager = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         wm = windowManager
 
@@ -121,8 +130,8 @@ object SpeedOverlay {
         watchStatusBar(tv)
         try {
             windowManager.addView(tv, p)
-        } catch (e: Exception) {
-            view = null; params = null
+        } catch (_: Exception) {
+            stop()
             return false
         }
 
@@ -130,11 +139,13 @@ object SpeedOverlay {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
         }
-        ctx.registerReceiver(screenReceiver, f)
-        screenOn = (ctx.getSystemService(Context.POWER_SERVICE) as PowerManager).isInteractive
+        if (runCatching { ctx.registerReceiver(screenReceiver, f) }.isFailure) {
+            stop()
+            return false
+        }
 
         handler.removeCallbacks(tick)
-        handler.post(tick)
+        if (screenOn && statusBarVisible) handler.post(tick)
         return true
     }
 
@@ -146,6 +157,11 @@ object SpeedOverlay {
         view = null
         params = null
         meter = null
+        wm = null
+        app = null
+        placedForWidth = 0
+        statusBarVisible = true
+        screenOn = true
     }
 
     /** Re-applies position / size / colour after a settings change, and refreshes now. */
@@ -154,7 +170,7 @@ object SpeedOverlay {
         val v = view ?: return
         val p = params ?: return
         runCatching { wm?.updateViewLayout(v, p) }
-        if (screenOn) {
+        if (screenOn && statusBarVisible) {
             handler.removeCallbacks(tick)
             handler.post(tick)
         }
@@ -201,17 +217,26 @@ object SpeedOverlay {
         listener?.invoke(down, up)
     }
 
-    /** Hides the meter while the status bar is hidden by a full-screen app, and shows it again after. */
+    /** Pause traffic polling in immersive fullscreen, resume on status-bar return. */
+    private fun setStatusBarVisible(v: TextView, visible: Boolean) {
+        if (statusBarVisible == visible) return
+        statusBarVisible = visible
+        v.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+        handler.removeCallbacks(tick)
+        meter?.reset() // ignore the hidden interval when the meter becomes visible
+        if (visible && screenOn) handler.post(tick)
+    }
+
     @Suppress("DEPRECATION")
     private fun watchStatusBar(v: TextView) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            v.setOnApplyWindowInsetsListener { view, insets ->
-                view.visibility = if (insets.isVisible(WindowInsets.Type.statusBars())) View.VISIBLE else View.INVISIBLE
+            v.setOnApplyWindowInsetsListener { _, insets ->
+                setStatusBarVisible(v, insets.isVisible(WindowInsets.Type.statusBars()))
                 insets
             }
         } else {
             v.setOnSystemUiVisibilityChangeListener { flags ->
-                v.visibility = if (flags and View.SYSTEM_UI_FLAG_FULLSCREEN != 0) View.INVISIBLE else View.VISIBLE
+                setStatusBarVisible(v, flags and View.SYSTEM_UI_FLAG_FULLSCREEN == 0)
             }
         }
     }
