@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Settings as SettingsIcon
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Article
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material3.NavigationBar
@@ -82,6 +83,7 @@ class MainActivity : ComponentActivity() {
     private var showingUpdates by mutableStateOf(false)
     private var showingSettings by mutableStateOf(false)
     private var showingNetworkRefresh by mutableStateOf(false)
+    private var showingOverlayPosition by mutableStateOf(false)
     private var showingStartup by mutableStateOf(false)
     private var startOnBoot by mutableStateOf(true)
 
@@ -99,7 +101,10 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         LiveUpdater.onResume(this)
         // Coming back from the permission screen: start automatically if allowed.
-        if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) SpeedService.start(this)
+        if (Prefs.enabled(this) && Settings.canDrawOverlays(this)) {
+            PowerRecovery.schedule(this)
+            SpeedService.start(this)
+        }
         SpeedOverlay.listener = { d, u -> runOnUiThread { down = d; up = u } }
         refresh()
     }
@@ -150,7 +155,8 @@ class MainActivity : ComponentActivity() {
         BackHandler(enabled = showingUpdates) { showingUpdates = false; showingSettings = true }
         BackHandler(enabled = showingStartup) { showingStartup = false; showingSettings = true }
         BackHandler(enabled = showingNetworkRefresh) { showingNetworkRefresh = false; showingSettings = true }
-        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh && !showingStartup) { showingSettings = false }
+        BackHandler(enabled = showingOverlayPosition) { showingOverlayPosition = false; showingSettings = true }
+        BackHandler(enabled = showingSettings && !showingUpdates && !showingNetworkRefresh && !showingOverlayPosition && !showingStartup) { showingSettings = false }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -163,6 +169,7 @@ class MainActivity : ComponentActivity() {
                                 when {
                                     showingUpdates -> Icons.Rounded.SystemUpdate
                                     showingNetworkRefresh -> Icons.Rounded.Refresh
+                                    showingOverlayPosition -> Icons.Rounded.Tune
                                     showingStartup -> Icons.Rounded.Article
                                     showingSettings -> Icons.Rounded.SettingsIcon
                                     else -> Icons.Rounded.Home
@@ -174,6 +181,7 @@ class MainActivity : ComponentActivity() {
                             Text(when {
                                 showingUpdates -> "About & updates"
                                 showingNetworkRefresh -> "Network refresh"
+                                showingOverlayPosition -> "Overlay position"
                                 showingStartup -> "Startup"
                                 showingSettings -> "Settings"
                                 else -> "Home"
@@ -204,15 +212,15 @@ class MainActivity : ComponentActivity() {
                             tonalElevation = 0.dp,
                         ) {
                             NavigationBarItem(
-                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh && !showingStartup,
-                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = false },
+                                selected = !showingUpdates && !showingSettings && !showingNetworkRefresh && !showingOverlayPosition && !showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingOverlayPosition = false; showingStartup = false; showingSettings = false },
                                 icon = { Icon(Icons.Rounded.Home, contentDescription = "Home") },
                                 label = { Text("Home") },
                                 alwaysShowLabel = true,
                             )
                             NavigationBarItem(
-                                selected = showingSettings || showingUpdates || showingNetworkRefresh || showingStartup,
-                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingStartup = false; showingSettings = true },
+                                selected = showingSettings || showingUpdates || showingNetworkRefresh || showingOverlayPosition || showingStartup,
+                                onClick = { showingUpdates = false; showingNetworkRefresh = false; showingOverlayPosition = false; showingStartup = false; showingSettings = true },
                                 icon = { dev.n2k02.updater.N2K02UpdateBadgedIcon(updateStatus) { Icon(Icons.Rounded.SettingsIcon, contentDescription = "Settings") } },
                                 label = { Text("Settings") },
                                 alwaysShowLabel = true,
@@ -258,6 +266,16 @@ class MainActivity : ComponentActivity() {
                 ) {
                     item { NetworkRefreshCard() }
                 }
+            } else if (showingOverlayPosition) {
+                LazyColumn(
+                    contentPadding = PaddingValues(
+                        start = 12.dp, end = 12.dp,
+                        top = padding.calculateTopPadding() + 8.dp,
+                        bottom = padding.calculateBottomPadding() + 24.dp,
+                    ),
+                ) {
+                    item { PositionCard() }
+                }
             } else if (showingSettings) {
                 // Same mRadio Settings typography, alignment and section spacing.
                 LazyColumn(
@@ -282,6 +300,20 @@ class MainActivity : ComponentActivity() {
                             trailingContent = { Text("${interval}s", color = MaterialTheme.colorScheme.primary) },
                             modifier = Modifier.clickable {
                                 showingNetworkRefresh = true
+                                showingStartup = false
+                                showingSettings = false
+                            },
+                        )
+                    }
+                    item {
+                        androidx.compose.material3.ListItem(
+                            headlineContent = { Text("Overlay position") },
+                            supportingContent = { Text("Adjust the horizontal and vertical position of the speed meter") },
+                            leadingContent = { Icon(Icons.Rounded.Tune, contentDescription = null) },
+                            trailingContent = { Text("›", color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.clickable {
+                                showingOverlayPosition = true
+                                showingNetworkRefresh = false
                                 showingStartup = false
                                 showingSettings = false
                             },
@@ -493,6 +525,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private companion object {
-        const val H_MIN = 50f
+        const val H_MIN = 0f
     }
 }
