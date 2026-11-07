@@ -21,8 +21,8 @@ class SpeedService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             // Charge connected or battery saver disabled: restore a missing/stalled overlay.
             if (PowerRecovery.shouldRestore(this@SpeedService)) {
-                if (SpeedOverlay.isRunning) SpeedOverlay.applySettings()
-                else SpeedOverlay.start(this@SpeedService)
+                val accepted = PowerRecovery.restore(this@SpeedService)
+                AppLog.add("RECOVERY", if (accepted) "RESTORE_REQUESTED" else "RESTORE_REJECTED")
             }
         }
     }

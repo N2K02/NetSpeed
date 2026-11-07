@@ -26,6 +26,8 @@ class OverlayPositionRecoveryContractTest {
         assertTrue(recovery.contains(".setPersisted(true)"))
         assertTrue(recovery.contains("PowerManager"))
         assertTrue(recovery.contains("battery.isCharging"))
+        assertTrue(recovery.contains("Settings.canDrawOverlays(context)"))
+        assertTrue(recovery.contains("BatteryRecoveryPolicy.FALLBACK_PERIOD_MS"))
         assertTrue(service.contains("PowerManager.ACTION_POWER_SAVE_MODE_CHANGED"))
         assertTrue(service.contains("Intent.ACTION_POWER_CONNECTED"))
         assertTrue(service.contains("PowerRecovery.cancel(ctx)"))
