@@ -12,6 +12,7 @@ class BootReceiver : BroadcastReceiver() {
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
                 if (Prefs.startOnBoot(context)) {
                     Prefs.setEnabled(context, true)
+                    PowerRecovery.schedule(context)
                     SpeedService.start(context)
                 }
             }

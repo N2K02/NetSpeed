@@ -5,6 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.PowerManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -13,6 +16,29 @@ import android.os.IBinder
 
 /** Foreground host for the enabled speed overlay; sticky restarts re-check the saved setting. */
 class SpeedService : Service() {
+    private var powerReceiverRegistered = false
+    private val powerReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            // Charge connected or battery saver disabled: restore a missing/stalled overlay.
+            if (PowerRecovery.shouldRestore(this@SpeedService)) {
+                val accepted = PowerRecovery.restore(this@SpeedService)
+                AppLog.add("RECOVERY", if (accepted) "RESTORE_REQUESTED" else "RESTORE_REJECTED")
+            }
+        }
+    }
+
+    private fun watchPowerState() {
+        if (powerReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_POWER_CONNECTED)
+            addAction(Intent.ACTION_BATTERY_OKAY)
+            addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+        }
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(powerReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else @Suppress("UnspecifiedRegisterReceiverFlag") registerReceiver(powerReceiver, filter)
+        powerReceiverRegistered = true
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -36,11 +62,15 @@ class SpeedService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
+        PowerRecovery.schedule(this)
+        runCatching { watchPowerState() }.onFailure { AppLog.add("SERVICE", "POWER_RECEIVER_FAILED") }
         AppLog.add("SERVICE", "METER_RUNNING")
         return START_STICKY
     }
 
     override fun onDestroy() {
+        if (powerReceiverRegistered) runCatching { unregisterReceiver(powerReceiver) }
+        powerReceiverRegistered = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         // A stopped foreground host must not leave an orphan polling overlay.
         // START_STICKY recreates and reattaches it when Android restarts us.
@@ -95,6 +125,7 @@ class SpeedService : Service() {
         fun stop(context: Context) {
             val ctx = context.applicationContext
             AppLog.add("SERVICE", "METER_STOP_REQUESTED")
+            PowerRecovery.cancel(ctx)
             SpeedOverlay.stop()
             runCatching { ctx.stopService(Intent(ctx, SpeedService::class.java)) }
                 .onFailure { AppLog.add("SERVICE", "METER_STOP_FAILED") }
