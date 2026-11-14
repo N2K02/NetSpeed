@@ -91,7 +91,7 @@ class SpeedService : Service() {
             @Suppress("DEPRECATION")
             Notification.Builder(this)
         }
-        val notification = builder.setSmallIcon(R.mipmap.ic_launcher)
+        val notification = builder.setSmallIcon(com.netspeed.app.R.drawable.ic_stat_app)
             .setContentTitle("NetSpeed is active")
             .setContentText("Showing live network speed")
             .setContentIntent(pending)
